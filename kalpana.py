@@ -56,6 +56,7 @@ parser.add_option("-s", "--polytype", dest="polytype", default="polygon", help="
 parser.add_option("-v", "--viztype",dest="viztype", default="kmz", help="kmz or shapefile")
 parser.add_option("-p", "--palettename", dest="palettename", default="water-level.pal", help="palette file name for the contour color scale")
 parser.add_option("-o", "--outputfile", dest="outputfile", default='null', help="name of output file")
+parser.add_option(      "--trackfile", dest="trackfile", help="file with lon and lat coordinates of track (in degrees)")
 parser.add_option("-g", "--logofile", dest="logofile", default='logo.png', help="name of logo image file")
 parser.add_option("-i", "--logodims", dest="logodims", default='null', help="dimensions of logo image file")
 parser.add_option("-q", "--logounits", dest="logounits", default='fraction', help="units of logo image file")
@@ -110,6 +111,7 @@ if options.storm == "null" :
         elif filetype == '5' or filetype == '6' or filetype == '7':
             print 'KMZ files cannot be created for this file type'
     filename = 'null'
+    trackfile = None
     logofile = 'logo.png'
     logodims = 'null'
     logounits = 'fraction'
@@ -134,6 +136,7 @@ else:
     logodims = options.logodims
     logounits = options.logounits
     logofile=options.logofile    
+    trackfile = options.trackfile
     contourlevels=options.contourlevels
     contourrange=options.contourrange
     specifiedticks=options.specifiedticks
@@ -342,6 +345,9 @@ if datumconv == 'yes':
 #
 # Extracting time step information from the output file 
 time_var= nc['time']
+if time_var.shape[0] == 0:
+    print "time variable in",filename,"is zero length. Exiting."
+    sys.exit(1)
 #
 # startdate specifies start time of ADCIRC computations 
 startdate = time_var.units
@@ -475,7 +481,7 @@ def createColorBar(hexlist,levels,ticks):
 
 #
 # CREATING SCREEN OVERLAYS (COLOR BAR AND LOGO) FOR THE KML FILE 
-def createScreenOverlaysForKML(kml,logofile,logodims,logounits):
+def createScreenOverlaysForKML(kml,logofile,logodims,logounits,trackfile):
     screen1 = kml.newscreenoverlay(name='Colorbar')
     screen1.icon.href = fileTypesColorBarNames[filetype]
     screen1.overlayxy = simplekml.OverlayXY(x=0,y=0,xunits=simplekml.Units.fraction,
@@ -507,6 +513,15 @@ def createScreenOverlaysForKML(kml,logofile,logodims,logounits):
             a = logodims.split(" ")
             screen2.size.x = float(a[0])
             screen2.size.y = float(a[1])
+    if trackfile:
+        trackfile_unit = open(trackfile,"r")
+        line_coords = []
+        for line in trackfile_unit:
+            lon, lat = line.split()
+            line_coords.append((lon, lat, 0))
+        trackfile_unit.close()
+        linestring = kml.newlinestring(name=storm)
+        linestring.coords = line_coords
 #
 # GENERAL REQUIREMENTS FOR SHAPE FILES AND KML FILES 
 if viztype ==  'kmz':
@@ -520,7 +535,7 @@ if viztype ==  'kmz':
     for i in c:
         hexColorsList.append(rgb_to_hex(i))
     createColorBar(hexColorsList,levels,ticks)
-    createScreenOverlaysForKML(kml,logofile,logodims,logounits)
+    createScreenOverlaysForKML(kml,logofile,logodims,logounits,trackfile)
 else:
     ## DEFINING SPATIAL REFERENCE ##
     crs = {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
