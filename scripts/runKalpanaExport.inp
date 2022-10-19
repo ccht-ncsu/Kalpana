@@ -1,0 +1,26 @@
+#################################################### Inputs description ##################################################
+# Inputs must be specified on the *LAST LINE* of the file delimited by space. The script has 7 required inputs and two optional.
+# This file must be in the same folder than the runKalpanaExport.py python script. DO NOT INCLUDE A LINE BELOW THE ARGUMENTS.
+#
+#Input1: Path of the github repository. If the path has any whitespace please use quation marks (""). If the "kalpanaExport.py" script is in the folder where the code 
+#        is being executed, the path must be specified as "." instead (without the quation marks).
+#
+#Input2: Complete path of the adcirc output, must be a netcdf file (*.nc). If the path has any whitespace please use quation marks ("").
+#
+#Input3: Name of the variable to export, e.g: 'zeta_max'.
+#
+#Input4: Contour levels. Start, stop and step (stop not included). Values must be comma-delimited, do not use whitespaces in between.
+#
+#Input5: Contours type. Only 'polyline' and 'polygon' are suported.
+#
+#Input6: epsg code, e.g: 4326 for lat/lon.
+#
+#Input7: Complete path of the output file. Only shapefile (*.shp), geopackage (*.gpkg) and kmz files are suported.
+#
+#Input8: Number of process, if more than 1 and a the input is time-varying filepython multiprocessing Pool class is used.
+#         If you want to use all available processors, input npro equals to 999. 
+#Input9 Complete path of the subdomain polygon kml or shapelfile. Input can also be a list with the uper-left x, upper-left y, lower-right x and lower-right y
+#        coordinates. Values must be comma-delimited, do not use whitespaces in between. THIS INPUT IS OPTIONAL, if not specified the complete domain will be exported.
+##########################################################################################################################################################################
+
+C:\Users\tacuevas\Documents\GitHub\kalpana_v2\code C:\Users\tacuevas\NCSU\Research\kalpana\Florence\fort.63.nc zeta 0,5,0.5 polyline 4326 C:\Users\tacuevas\NCSU\Research\kalpana\py3\multiprocessing\outputs\A.shp 8

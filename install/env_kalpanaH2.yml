@@ -1,0 +1,16 @@
+name: env_kalpanaH2
+channels:
+ - conda-forge
+dependencies:
+ - matplotlib
+ - tqdm
+ - simplekml
+ - netCDF4
+ - geopandas
+ - rtree
+ - cmocean
+ - dask-ml
+ - rioxarray
+ - scipy
+ - scikit-learn
+ - shapely
