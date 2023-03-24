@@ -6,7 +6,7 @@
 2. Downscaling: transform the *ADICRC* *maxele.63.nc* file to a constant and higher resolution DEM considering small scale topographic/bathymetric features (Rucker et. al 2021).
 
 ## Visualization 
-CHANGED TO BE MORE CLEAR TO NEW USERS
+CHANGED TO BE MORE CLEAR TO NEW USERS <br>
 Setup for running the visualization examples (export_exampleXX.ipynb):
 1. Create a conda environment using the yml file provided in the *install* folder. See **this website** for instructions.
 2. Clone the Kalpana repository to your local device. See **this webiste** for instructions.
