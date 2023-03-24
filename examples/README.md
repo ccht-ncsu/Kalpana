@@ -5,8 +5,10 @@
 1. Visualization: export *ADCIRC* output as geospatial vector data for visualization using QGIS or any similar GIS software.
 2. Downscaling: transform the *ADICRC* *maxele.63.nc* file to a constant and higher resolution DEM considering small scale topographic/bathymetric features (Rucker et. al 2021).
 
-## Visualization
-For running the visualization examples (export_exampleXX.ipynb) you need to create a conda environment using the yml file provided in the *install* folder, and clone the repo to access the python functions.
+## Visualization *If I was a new user, I would get stuck here - either unfamiliar with conda or git cloning. Here are some edits:*
+Setup for running the visualization examples (export_exampleXX.ipynb):
+1. Create a conda environment using the yml file provided in the *install* folder. See **this website** for instructions.
+2. Clone the Kalpana repository to your local device. See **this webiste** for instructions.
 
 **Example 01** (export_example01.ipynb)<br>
 In this example, we will create contours as polygons based on the maximum flooding outputs from ADCIRC,
