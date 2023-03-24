@@ -35,7 +35,7 @@ This image has all the necessary files and has been set up to downscale *ADCIRC*
 This image is configured to run kalpana interactively, all the python packages and *GRASS GIS* are installed. You need to copy the examples *downscaling_exampleXX.py*, the necessary inputs (availables [here](https://drive.google.com/drive/folders/1cbQzN4SrLs_rVlz9q8zHCKbFtQpLO5CG?usp=sharing)), and the *Kalpana* *downscaling.py* and *export.py* python modules from this repo to the container.
 
 
-The steps for running ?IN THE WINDOWS TERMINAL? are:
+The steps for running ?IN THE WINDOWS CMD LINE? are:
 
 1) 'docker pull tacuevas/kalpana_m:latest'
 2) 'docker run -it tacuevas/kalpana_m:latest'
