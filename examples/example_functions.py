@@ -1,20 +1,17 @@
-import pandas as pd
+import geopandas as gpd
 import numpy as np
+from numpy import linspace
 import netCDF4 as netcdf
-import matplotlib.pyplot as plt
+from shapely.geometry import Point, LineString
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.cm as cm
+import cmocean.cm as cmo
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-from shapely.geometry import Point, LineString
-import geopandas as gpd
-from matplotlib import colors
-import matplotlib.patches as mpatches
-import matplotlib.cm as cm
-from matplotlib.lines import Line2D
-from numpy import linspace
-import contextily as cxt
-import cmocean.cm as cmo
 
 
 def plot_maxele(ncfile, levels):
@@ -137,8 +134,10 @@ def plot_polylines(gdf, levels):
 
     fig.suptitle(f'Polyline Contours created from nc2shp()', fontsize = 16)
 
-def plot_polygons(gdf):
+def plot_polygons(gdf, levels):
     fig, ax = plt.subplots(figsize = (8, 4), nrows = 1, ncols = 2, subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
+    cmap=plt.cm.get_cmap('viridis', int(levels[1]/levels[2])) 
+    ticks = np.arange(levels[0], levels[1], levels[2])
 
     ##### subplot 0, 0
 
@@ -181,9 +180,8 @@ def plot_polygons(gdf):
     gl.right_labels = False
     ax[1].set_title('North Carolina')
 
-
-    gdf.plot(column = 'zMean', legend = True, cmap = 'viridis', vmin = -0.25, vmax = 2.75,
-            legend_kwds={'label': 'Max water level [m MSL]', 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04}, 
+    gdf.plot(column = 'zMean', legend = True, cmap = cmap, vmin = levels[0]-0.25, vmax = levels[1]-0.25,
+            legend_kwds={'label': 'Max water level [m MSL]', 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks}, 
             ax = ax[1], aspect = 'equal')
 
     fig.suptitle(f'Polygon Contours created from nc2shp()', fontsize = 16)
@@ -195,6 +193,8 @@ def polygon_compare(ncfile, levels, gdf):
     f1 = ncfile
     nc1 = netcdf.Dataset(f1, 'r')
     fig, ax = plt.subplots(figsize = (9, 4.5), nrows = 1, ncols = 2, subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
+    cmap=plt.cm.get_cmap('viridis', int(levels[1]/levels[2])) 
+    ticks = np.arange(levels[0], levels[1], levels[2])
 
     ##### subplot 0, 0
 
@@ -202,12 +202,12 @@ def polygon_compare(ncfile, levels, gdf):
     tri = mpl.tri.Triangulation(nc1['x'][:].data, nc1['y'][:].data, nc1['element'][:,:] - 1)
     aux = nc1['zeta_max'][:].data
     aux = np.nan_to_num(aux, nan = -99999.0).reshape(-1)
-    contours = ax[0].tricontourf(tri, aux, levels = levels, cmap = 'viridis')
+    contours = ax[0].tricontourf(tri, aux, levels = np.arange(levels[0]-0.25, levels[1]+0.25, levels[2]), cmap = cmap)
     ax[0].set_xlabel('Longitude [deg]')
     ax[0].set_ylabel('Latitude [deg]')
     ax[0].set_xlim([-78.5, -75])
     ax[0].set_ylim([33.5, 37])
-    cb = fig.colorbar(contours, extend = 'both', ax = ax[0], fraction=0.046, pad=0.04)
+    cb = fig.colorbar(contours, extend = 'both', ax = ax[0], fraction=0.046, pad=0.04, ticks = ticks)
     cb.set_label('Max water level [m MSL]')
 
     # additional
@@ -237,8 +237,8 @@ def polygon_compare(ncfile, levels, gdf):
     gl.right_labels = False
     ax[1].set_title('Polygon Contours from nc2shp()')
 
-    gdf.plot(column = 'zMean', legend = True, cmap = 'viridis', vmin = -0.25, vmax = 2.75,
-            legend_kwds={'label': 'Max water level [m MSL]', 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04}, 
+    gdf.plot(column = 'zMean', legend = True, cmap = cmap, vmin = levels[0]-0.25, vmax = levels[1]-0.25,
+            legend_kwds={'label': 'Max water level [m MSL]', 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks}, 
             ax = ax[1], aspect = 'equal')
 
 def polyline_compare(ncfile, levels, gdf, lev):
