@@ -18,16 +18,19 @@ warnings.filterwarnings("ignore")
 import time
 import dask
 #import dask.array as da
-from tqdm.dask import TqdmCallback
+#from tqdm.dask import TqdmCallback
 #from vyperdatum.points import VyperPoints
 from scipy.spatial import KDTree, distance
 from itertools import islice
 from pathlib import Path
 import rioxarray as rxr
+from loguru import logger
 
 '''
     EXPLAIN WORKFLOW
 '''
+
+# Remove old logger and start new one
 
 def gdfChangeVerUnit(gdf, ini, out):
     ''' Change vertical units of the columns of a GeoDataFrame which
@@ -307,8 +310,10 @@ def filledContours2gpd(tri, data, levels, epsg, step, orgMax, pbar=False):
         daskGeoms = dask.compute(tasks, scheduler = 'threads')
     ## call dask with progress bar
     else:
-        with TqdmCallback(desc = "Compute contours using Dask"):
-            daskGeoms = dask.compute(tasks, scheduler = 'threads')
+        #with TqdmCallback(desc = "Compute contours using Dask"):
+        logger.info('Begin computing contours using Dask')
+        daskGeoms = dask.compute(tasks, scheduler = 'threads')
+        logger.info('Begin computing contours using Dask')
     ## dask output to list
     geoms = list(itertools.chain(*daskGeoms[0]))
     
@@ -366,8 +371,10 @@ def contours2gpd(tri, data, levels, epsg, pbar=False):
         daskGeoms = dask.compute(tasks, scheduler = 'threads')
     ## call dask with progress bar
     else:
-        with TqdmCallback(desc = "Compute contours using Dask"):
-            daskGeoms = dask.compute(tasks, scheduler = 'threads')
+        #with TqdmCallback(desc = "Compute contours using Dask"):
+        logger.info('Begin computing contours using Dask')
+        daskGeoms = dask.compute(tasks, scheduler = 'threads')
+        logger.info('Finish computing contours using Dask')
 
     geoms = list(itertools.chain(*daskGeoms[0]))
     
@@ -452,7 +459,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
             gdf = filledContours2gpd(tri, aux, levels, epsg, stepLevel, orgMaxLevel, True)
         ## error message
         else:
-            print('only "polyline" and "polygon" types are supported!')
+            logger.info('only "polyline" and "polygon" types are supported!')
             sys.exit(-1)
         ## add more info to the geodataframe
         gdf['variable'] = [vname]*len(gdf)
@@ -507,7 +514,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
                 listGdf.append(gdfi)
         ## error
         else:
-            print('only "polyline" and "polygon" types are supported!')
+            logger.info('only "polyline" and "polygon" types are supported!')
             sys.exit(-1)
         
         ## define output geodataframe
@@ -611,7 +618,7 @@ def readSubDomain(subDomain, epsg):
                 gdfSubDomain = gpd.GeoDataFrame(geometry = [poly], crs = epsg)
 
             except:
-                print('Only shape, geopackage, kml formats and rasters are suported for sub domain generation!')
+                logger.info('Only shape, geopackage, kml formats and rasters are suported for sub domain generation!')
                 sys.exit(-1)            
     
     elif type(subDomain) == list and len(subDomain) == 4:
@@ -624,7 +631,7 @@ def readSubDomain(subDomain, epsg):
         ## define gdf
         gdfSubDomain = gpd.GeoDataFrame(geometry = [poly], crs = epsg)
     else:
-        print('subDomain must be the path of a kml or shapefile, or a list with the coordinates of ' \
+        logger.info('subDomain must be the path of a kml or shapefile, or a list with the coordinates of ' \
               'the upper left and lower right corners of a box')
         sys.exit(-1)
     
@@ -788,7 +795,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
                 gdf with mesh elements, representative length and area of each triangle
     '''
     
-    print('Start exporting adcirc to shape')
+    logger.info('Start exporting adcirc to shape')
     ## read adcirc file
     nc = netcdf.Dataset(ncFile, 'r')
     ## change units of the requested levels
@@ -813,28 +820,28 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     t00 = time.time()
     gdf = runExtractContours(nc, var, levels, conType, epsgIn, stepLevel, orgMaxLevel, 
                             dzFile, zeroDif)
-    print(f'    Ready with the contours extraction: {(time.time() - t00)/60:0.3f} min')
+    logger.info(f'    Ready with the contours extraction: {(time.time() - t00)/60:0.3f} min')
     
     ## clip contours if requested
     if subDomain is not None:
         t0 = time.time()
         subDom = readSubDomain(subDomain, epsgIn)
         gdf = gpd.clip(gdf, subDom)
-        print(f'    Cliping contours based on mask: {(time.time() - t0)/60:0.3f} min')
+        logger.info(f'    Cliping contours based on mask: {(time.time() - t0)/60:0.3f} min')
     ## change vertical units if requested
     if vUnitIn == vUnitOut:
         pass
     else:
         t0 = time.time()
         gdf = gdfChangeVerUnit(gdf, vUnitIn, vUnitOut)
-        print(f'    Vertical units changed: {(time.time() - t0)/60:0.3f} min')
+        logger.info(f'    Vertical units changed: {(time.time() - t0)/60:0.3f} min')
     ## change CRS if requested
     if epsgIn == epsgOut:
         pass
     else:
         t0 = time.time()
         gdf = gdf.to_crs(epsgOut)
-        print(f'    Changing CRS: {(time.time() - t0)/60:0.3f} min')
+        logger.info(f'    Changing CRS: {(time.time() - t0)/60:0.3f} min')
     ## save output shape file
     t0 = time.time()
     if pathOut.endswith('.shp'):
@@ -843,10 +850,10 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         gdf.to_file(pathOut, driver = 'GPKG')
     elif pathOut.endswith('.wkt'):
         gdf.to_csv(pathOut)
-    print(f'    Saving file: {(time.time() - t0)/60:0.3f} min')
+    logger.info(f'    Saving file: {(time.time() - t0)/60:0.3f} min')
     ## export mesh if requested
     if exportMesh == True:
-        print('    Exporting mesh')
+        logger.info('    Exporting mesh')
         t0 = time.time()
         mesh = mesh2gdf(nc, epsgIn, epsgOut)
         
@@ -854,12 +861,12 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
             mesh = mesh.clip(mesh, subDom)
         
         mesh.to_file(os.path.join(os.path.dirname(pathOut), f'{meshName}.shp'))
-        print(f'    Mesh exported: {(time.time() - t0)/60:0.3f} min')
-        print(f'Ready with exporting code after: {(time.time() - t00)/60:0.3f} min')
+        logger.info(f'    Mesh exported: {(time.time() - t0)/60:0.3f} min')
+        logger.info(f'Ready with exporting code after: {(time.time() - t00)/60:0.3f} min')
         return gdf, mesh
     
     else:
-        print(f'Ready with exporting code after: {(time.time() - t00)/60:0.3f} min')
+        logger.info(f'Ready with exporting code after: {(time.time() - t00)/60:0.3f} min')
         return gdf
     
 def fort14togdf(filein, epsgIn, epsgOut):
@@ -1302,7 +1309,7 @@ def nc2kmz(ncFile, var, levels, conType, epsg, pathOut, vUnitIn='m', vUnitOut='m
     if checkTimeVarying(nc) == 1:
         ## file can time-varying but if the depth is requested, it can be exported to google earth
         if var != 'depth':
-            print('Time-varying files can not be exported as kmz!')
+            logger.info('Time-varying files can not be exported as kmz!')
             sys.exit(-1)
     ## colormap name for bathymetry
     if var == 'depth':
@@ -1344,7 +1351,7 @@ def nc2kmz(ncFile, var, levels, conType, epsg, pathOut, vUnitIn='m', vUnitOut='m
     elif conType == 'polyline':
         kml = lines2kml(gdf, levels, cmap)
     else:
-        print('Only "polygon" o "polyline" formats are supported')
+        logger.info('Only "polygon" o "polyline" formats are supported')
         sys.exit(-1)
     ## add overlay if requested
     if overlay == True:

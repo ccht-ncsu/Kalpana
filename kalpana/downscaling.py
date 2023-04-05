@@ -1,15 +1,17 @@
 import shutil
 import os
+import argparse
 import subprocess
 import sys
 import time
 import dask
-from tqdm.dask import TqdmCallback
+#from tqdm.dask import TqdmCallback
 import geopandas as gpd
 import rioxarray as rxr
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
-from kalpana.export import nc2shp, mesh2gdf, fort14togdf, readSubDomain
+from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain
+from loguru import logger
 
 '''
     All functions using GRASS GRIS has an argument 'pkg' which is the grass package.
@@ -49,7 +51,7 @@ def rastersToList(pathRasters, rasterFiles):
     if type(rasterFiles) == str:
         rasterFiles = [rasterFiles]
     # else:
-        # print("Warning: if DEM raster resolutions do not match, the aggregate DEM " \
+        # logger.info("Warning: if DEM raster resolutions do not match, the aggregate DEM " \
                 # "resolution will match the resolution of the first input raster.")
     rasterFiles = [os.path.join(pathRasters, r) for r in rasterFiles]
     return rasterFiles
@@ -72,8 +74,8 @@ def grassEnvVar(grassVer):
         out = out.strip().decode('utf-8')
 
         if p.returncode != 0:
-            print(f'ERROR: {err}', file=sys.stderr)
-            print(f'ERROR: Cannot find GRASS GIS {grassVer} start script: {startCmd}', file=sys.stderr)
+            logger.info(f'ERROR: {err}', file=sys.stderr)
+            logger.info(f'ERROR: Cannot find GRASS GIS {grassVer} start script: {startCmd}', file=sys.stderr)
             sys.exit(-1)
 
         ########### Add environment variables
@@ -88,7 +90,7 @@ def grassEnvVar(grassVer):
         sys.path.append(subprocess.check_output(["grass", "--config", "python_path"], text=True).strip())
 
     else:
-        print('OS not known! only windows and linux are supported')
+        logger.info('OS not known! only windows and linux are supported')
         
 def createGrassLoc(grassVer, locPath, createLocMethod, myepsg, rasFile):
     ''' Create a Grass location for the downscaling methods. 
@@ -112,7 +114,7 @@ def createGrassLoc(grassVer, locPath, createLocMethod, myepsg, rasFile):
     elif sys.platform == 'linux':
         grassBin = 'grass'
     else:
-        print('OS not known! only windows and linux are supported')
+        logger.info('OS not known! only windows and linux are supported')
     #### check if location already exist
     if os.path.isdir(locPath):
         shutil.rmtree(locPath)
@@ -131,8 +133,8 @@ def createGrassLoc(grassVer, locPath, createLocMethod, myepsg, rasFile):
     out, err = p.communicate()
 
     if p.returncode != 0:
-        print(f'ERROR: {err}', file = sys.stderror)
-        print(f'"ERROR: Cannot create location {startCmd}', file = sys.stderror)
+        logger.info(f'ERROR: {err}', file = sys.stderror)
+        logger.info(f'"ERROR: Cannot create location {startCmd}', file = sys.stderror)
         sys.exit(-1)
 
 def initGrass(locPath, pkg, mapset='PERMANENT'):
@@ -239,8 +241,10 @@ def importRasters_parallel(rasFiles, pkg, myepsg):
             return rasObj
 
         tasks = [importRastersParallel(r, pkg, myepsg) for r in rasFiles[1:]]
-        with TqdmCallback(desc = "Importing DEMs"):
-            rasterOutList2 = dask.compute(tasks, scheduler = 'processes')
+        #with TqdmCallback(desc = "Importing DEMs"):
+        logger.info('Begin importing DEMs')
+        rasterOutList2 = dask.compute(tasks, scheduler = 'processes')
+        logger.info('Finish importing DEMs')
         rasterOutList = rasterOutList + rasterOutList2[0]
                 
     return rasterOutList
@@ -328,31 +332,31 @@ def setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, pkg0, pkg1,
     if createGrassLocation == True:
         ta = time.time()
         rasFiles = rastersToList(pathRasFiles, rasterFiles) ## list with path of rasters to import
-        print(f'        rasters to list: {(time.time() - ta)/60: 0.3f} min')
+        logger.info(f'        rasters to list: {(time.time() - ta)/60: 0.3f} min')
         if os.path.exists(rasFiles[0]):
             ta = time.time()
             createGrassLoc(grassVer, pathGrassLocation, createLocMethod, myepsg, rasFiles[0])
-            print(f'        create location: {(time.time() - ta)/60: 0.3f} min')
+            logger.info(f'        create location: {(time.time() - ta)/60: 0.3f} min')
         else:
             sys.exit(f'Raster file does not exist: {rasFiles[0]}')
         
         ta = time.time()
         initGrass(pathGrassLocation, pkg1)
-        print(f'        init grass: {(time.time() - ta)/60: 0.3f} min')
+        logger.info(f'        init grass: {(time.time() - ta)/60: 0.3f} min')
         
         ta = time.time()
         grassRasList = importRasters_parallel(rasFiles, pkg0, myepsg) ## try rasters with different resolution? check if rasters are in different crs that location
         ### oarallel
-        print(f'        import raster: {(time.time() - ta)/60: 0.3f} min')
+        logger.info(f'        import raster: {(time.time() - ta)/60: 0.3f} min')
         
         ta = time.time()
         setDownscalingDEM(grassRasList, pkg0)
-        print(f'        set downscaling dem: {(time.time() - ta)/60: 0.3f} min')
+        logger.info(f'        set downscaling dem: {(time.time() - ta)/60: 0.3f} min')
     
     else:
         ta = time.time()
         initGrass(pathGrassLocation, pkg1)
-        print(f'        init grass: {(time.time() - ta)/60: 0.3f} min')
+        logger.info(f'        init grass: {(time.time() - ta)/60: 0.3f} min')
         
 def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, exportOrg):
     ''' Preprocess kalpana shape file
@@ -378,37 +382,38 @@ def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, 
     t0 = time.time()
     pkg.run_command('v.in.ogr', input = kalpanaShp, overwrite = True,
                     quiet = True, snap = 0.000001, min_area = 10,
-                    flags = 'o')
-    print(f'        Import kalpana shapefile: {(time.time() - t0)/60:0.2f} min')
+                    flags = 'o', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logger.info(f'        Import kalpana shapefile: {(time.time() - t0)/60:0.2f} min')
     
     t0 = time.time()
     pkg.run_command('v.to.rast', input = os.path.basename(kalpanaShp[:-4]), 
                     type = 'area', output = 'kalpanaRast', use = 'attr', 
                     quiet = True, attribute_column = attrCol, overwrite = True)
-    print(f'        Kalpana shape to raster: {(time.time() - t0)/60:0.2f} min')
+    logger.info(f'        Kalpana shape to raster: {(time.time() - t0)/60:0.2f} min')
     
     if exportOrg == True: #export adcirc output without growing as tif
-        pkg.run_command('r.out.gdal', input = 'kalpanaRast', flags = 'm', format = 'GTiff', 
-                        nodata = -9999, output = f'{kalpanaShp[:-4]}.tif', overwrite = True)
+        pkg.run_command('r.out.gdal', input = 'kalpanaRast', flags = 'mc', format = 'GTiff', 
+                        nodata = -9999, output = f'{kalpanaShp[:-4]}.tif', overwrite = True, 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     if mesh2ras == True: #exportMesh is True so meshFile is a shapefile
     
         t0 = time.time()
         pkg.run_command('v.in.ogr', input = meshFile, overwrite = True,
                         quiet = True, min_area = int(minArea/100)*100, flags = 'o', snap = 0.1)
-        print(f'        Import mesh shapefile: {(time.time() - t0)/60:0.2f} min')
+        logger.info(f'        Import mesh shapefile: {(time.time() - t0)/60:0.2f} min')
         
         t0 = time.time()
         pkg.run_command('v.to.rast', input = os.path.splitext(os.path.basename(meshFile))[0], 
                         type = 'area', use = 'attr', quiet = True, 
                         attribute_column = 'repLen', overwrite = True,
                         output = os.path.splitext(os.path.basename(meshFile))[0])
-        print(f'        Mesh shape to raster: {(time.time() - t0)/60:0.2f} min')
+        logger.info(f'        Mesh shape to raster: {(time.time() - t0)/60:0.2f} min')
         t0 = time.time()
         pkg.run_command('r.out.gdal', input = os.path.splitext(os.path.basename(meshFile))[0], 
-                        flags = 'm', format = 'GTiff', nodata = -9999, overwrite = True,
-                        output = os.path.splitext(meshFile)[0] + '.tif')
-        print(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min')
+                        flags = 'mc', format = 'GTiff', nodata = -9999, overwrite = True,
+                        output = os.path.splitext(meshFile)[0] + '.tif', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min')
         
     else: # raster mesh already exists
         ## try to find file in the grass location
@@ -438,13 +443,13 @@ def staticGrow(repLenFactor, pkg, meshFile):
     pkg.run_command('r.grow.distance', input = 'kalpanaRast', metric = 'squared', distance = 'grownRastDist',
                     value = 'grownRastVal', overwrite = True, quiet = True) ## flag m: distance in meters
     t1 = time.time()
-    print(f'        Running r.grow algorithm: {(t1 - t0)/60:0.3f} min')
+    logger.info(f'        Running r.grow algorithm: {(t1 - t0)/60:0.3f} min')
     repLenFactorSq = repLenFactor**2
     pkg.mapcalc("$output = if(!isnull($input), $input, if($dist <= $fac * $radius * $radius, $new, null()))",
           output = 'grownKalpanaRast0', input = 'kalpanaRast', radius = meshFile, base = 'dem', fac = repLenFactorSq,
           new = 'grownRastVal', dist = 'grownRastDist', quiet = True, overwrite = True)
     t2 = time.time()
-    print(f'        Limit grown raster using adcirc mesh: {(t2 - t1)/60:0.3f} min')
+    logger.info(f'        Limit grown raster using adcirc mesh: {(t2 - t1)/60:0.3f} min')
 
 def clumping(rasterGrown, rasterOrg, rasterNew, clumpSizeThreshold, pkg):
     ''' Function to deal with clump of disconnected cells generated after remove cells
@@ -520,16 +525,16 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
         pkg.mapcalc("$output = if(!isnull($dem), if($dem > $adcirc, null(), $adcirc), $adcirc)",
                     output = 'grownKalpanaRast1', adcirc = 'grownKalpanaRast0', 
                     dem = 'dem', quiet = True, overwrite = True)
-        print(f'        Delete ground level: {(time.time() - ta)/60:0.3f}')
+        logger.info(f'        Delete ground level: {(time.time() - ta)/60:0.3f}')
     else:
         ta = time.time()
         pkg.run_command('g.rename', raster = ('grownKalpanaRast0', 'grownKalpanaRast1'), 
                       overwrite = True, quiet = True)
-        print(f'        Rename: {(time.time() - ta)/60:0.3f}')
+        logger.info(f'        Rename: {(time.time() - ta)/60:0.3f}')
                       
     ta = time.time()
     clumping('grownKalpanaRast1', 'kalpanaRast', 'grownKalpanaRastLevel', clumpThreshold, pkg)
-    print(f'        Delete unconnected clumps: {(time.time() - ta)/60:0.3f}')
+    logger.info(f'        Delete unconnected clumps: {(time.time() - ta)/60:0.3f}')
     
     
     pathOut = os.path.dirname(kalpanaShp)
@@ -537,47 +542,47 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
     
     ta = time.time()
     # export raster as tif
-    pkg.run_command('r.out.gdal', input = 'grownKalpanaRastLevel', flags = 'm', format = 'GTiff', nodata = -9999, 
+    pkg.run_command('r.out.gdal', input = 'grownKalpanaRastLevel', flags = 'mc', format = 'GTiff', nodata = -9999, 
                    output = os.path.join(pathOut, f'{fileOut}_level_downscaled.tif'), 
-                   overwrite = True)
-    print(f'        export as tif level: {(time.time() - ta)/60:0.3f}')
+                   overwrite = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logger.info(f'        export as tif level: {(time.time() - ta)/60:0.3f}')
     
     if ras2vec == True:
         ta = time.time()
         #Export to ESRI shapefile
         pkg.run_command('r.to.vect', input = 'grownKalpanaRastLevel', output = 'grownKalpanaVectLevel', type = 'area')
-        print(f'        ras to vector: {(time.time() - ta)/60:0.3f}')
+        logger.info(f'        ras to vector: {(time.time() - ta)/60:0.3f}')
         
         ta = time.time()
         pkg.run_command('v.out.ogr', input = 'grownKalpanaVectLevel', 
                           output = os.path.join(pathOut, f'{fileOut}_level_downscaled'), 
                           type = 'area', format = 'ESRI_Shapefile', flags = 'se', quiet = True, overwrite = True)
-        print(f'        export as shp level: {(time.time() - ta)/60:0.3f}')
+        logger.info(f'        export as shp level: {(time.time() - ta)/60:0.3f}')
     
     if floodDepth == True: ## export water depth in flooded cells
         ta = time.time()
         pkg.mapcalc("$output = if(!isnull($dem) && !isnull($grown), $grown - $dem, null())", grown = 'grownKalpanaRastLevel', 
                     dem = 'dem', output = 'grownKalpanaRastDepth', quiet = True, overwrite = True)
-        print(f'        compute water depth: {(time.time() - ta)/60:0.3f}')
+        logger.info(f'        compute water depth: {(time.time() - ta)/60:0.3f}')
         
         ta = time.time()
         # export raster as tif
-        pkg.run_command('r.out.gdal', input = 'grownKalpanaRastDepth', flags = 'm', format = 'GTiff', nodata = -9999, 
+        pkg.run_command('r.out.gdal', input = 'grownKalpanaRastDepth', flags = 'mc', format = 'GTiff', nodata = -9999, 
                        output = os.path.join(pathOut, f'{fileOut}_depth_downscaled.tif'), 
-                       overwrite = True)
-        print(f'        export as tif depth: {(time.time() - ta)/60:0.3f}')
+                       overwrite = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info(f'        export as tif depth: {(time.time() - ta)/60:0.3f}')
         
         ta = time.time()
         if ras2vec == True:
             #Export to ESRI shapefile
             pkg.run_command('r.to.vect', input = 'grownKalpanaRastDepth', output = 'grownKalpanaVectDepth', type = 'area')
-            print(f'        ras to shp depth: {(time.time() - ta)/60:0.3f}')
+            logger.info(f'        ras to shp depth: {(time.time() - ta)/60:0.3f}')
             
             ta = time.time()
             pkg.run_command('v.out.ogr', input = 'grownKalpanaVectDepth', 
                             output = os.path.join(pathOut, f'{fileOut}_depth_downscaled'), 
                             type = 'area', format = 'ESRI_Shapefile', flags = 'se', quiet = True, overwrite = True)
-            print(f'        export as shp depth: {(time.time() - ta)/60:0.3f}')
+            logger.info(f'        export as shp depth: {(time.time() - ta)/60:0.3f}')
         
 def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
               epsgIn=4326, vUnitIn='m', vUnitOut='ft', var='zeta_max', conType ='polygon', 
@@ -698,7 +703,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     else:
         thres = clumpThreshold
 
-    print(f'Static downscaling started')
+    logger.info(f'Static downscaling started')
     t1 = time.time()
     
     grassEnvVar(grassVer)
@@ -711,7 +716,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     else:
         pathGrassLocation = os.path.join(pathaux, nameGrassLocation)
     
-    print(f'    Start Setup grass environment')
+    logger.info(f'    Start Setup grass environment')
     t11 = time.time()
     
     if rasterFiles == 'all':
@@ -721,29 +726,29 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
     
     t2 = time.time()
-    print(f'    Setup grass environment: {(t2 - t11)/60:0.2f} min')
+    logger.info(f'    Setup grass environment: {(t2 - t11)/60:0.2f} min')
     
      ## setup growing
-    print(f'    Start Downscaling preprocess')
+    logger.info(f'    Start Downscaling preprocess')
     ## here the thres must be in square meters
     setupGrowing(pathOut, attrCol, exportMesh, meshFile, thres, gs, epsgOut, exportOrg)
     t3 = time.time()
-    print(f'    Downscaling preprocess: {(t3 - t2)/60:0.3f} min')
+    logger.info(f'    Downscaling preprocess: {(t3 - t2)/60:0.3f} min')
     
     ## grow
-    print(f'    Start growing')
+    logger.info(f'    Start growing')
     staticGrow(repLenGrowing, gs, os.path.splitext(os.path.basename(meshFile))[0])
     t4 = time.time()
-    print(f'    Ready with static grow: {(t4 - t3)/60:0.3f} min')
+    logger.info(f'    Ready with static grow: {(t4 - t3)/60:0.3f} min')
     
    ## postprocess
-    print(f'    Start postprocessing')
+    logger.info(f'    Start postprocessing')
     postProcessStatic(compAdcirc2dem, floodDepth, pathOut, thres, gs, ras2vec)
     t5 = time.time()
-    print(f'    Ready with postprocess: {(t5 - t4)/60:0.3f} min')
-    print(f'Ready with static downscaling: {(t5 - t1)/60:0.3f} min')
-    print(f'Kalpana finished sucsesfully after: {(t5 - t0)/60:0.3f} min')
-    print(f'Output files saved on: {pathaux}')
+    logger.info(f'    Ready with postprocess: {(t5 - t4)/60:0.3f} min')
+    logger.info(f'Ready with static downscaling: {(t5 - t1)/60:0.3f} min')
+    logger.info(f'Kalpana finished sucsesfully after: {(t5 - t0)/60:0.3f} min')
+    logger.info(f'Output files saved on: {pathaux}')
     
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
                       nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster'):
@@ -778,19 +783,19 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     ## create gdf from fort14 file with elements as geometries
     t0 = time.time()
     gdfMesh = fort14togdf(fort14, 4326, 6543)
-    print(f'fort14 to mesh: {(time.time() - t0)/60:0.3f} min')
+    logger.info(f'fort14 to mesh: {(time.time() - t0)/60:0.3f} min')
     
     ## clip contours if requested
     if subDomain is not None:
         t0 = time.time()
         subDom = readSubDomain(subDomain, epsgIn)
         gdfMesh = gpd.clip(gdfMesh, subDom)
-        print(f'Clip mesh using subfomain: {(time.time() - t0)/60:0.3f} min')
+        logger.info(f'Clip mesh using subfomain: {(time.time() - t0)/60:0.3f} min')
         
     ## export gdf as shapefile
     t0 = time.time()
     gdfMesh.to_file(pathOut)
-    print(f'Export mesh gdf as shapefile: {(time.time() - t0)/60:0.3f} min')
+    logger.info(f'Export mesh gdf as shapefile: {(time.time() - t0)/60:0.3f} min')
     ## path where the grass loc will be created
     pathaux = os.path.dirname(pathOut)
     ## add grass to the environment variables
@@ -804,7 +809,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     else:
         pathGrassLocation = os.path.join(pathaux, nameGrassLocation)
 
-    print(f'    Start Setup grass environment')
+    logger.info(f'    Start Setup grass environment')
     t11 = time.time()
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
@@ -815,20 +820,20 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     ## load mesh into grass
     gs.run_command('v.in.ogr', input = pathOut, overwrite = True,
                     quiet = True, min_area = int(minArea/100)*100, flags = 'o', snap = 0.1)
-    print(f'        Import mesh shapefile: {(time.time() - t0)/60:0.2f} min')
+    logger.info(f'        Import mesh shapefile: {(time.time() - t0)/60:0.2f} min')
     ## mesh shapefile to raster
     t0 = time.time()
     gs.run_command('v.to.rast', input = os.path.splitext(os.path.basename(pathOut))[0], 
                     type = 'area', use = 'attr', quiet = True, 
                     attribute_column = 'repLen', overwrite = True,
                     output = os.path.splitext(os.path.basename(pathOut))[0])
-    print(f'        Mesh shape to raster: {(time.time() - t0)/60:0.2f} min')
+    logger.info(f'        Mesh shape to raster: {(time.time() - t0)/60:0.2f} min')
     ## export raster
     t0 = time.time()
     gs.run_command('r.out.gdal', input = os.path.splitext(os.path.basename(pathOut))[0], 
-                    flags = 'm', format = 'GTiff', nodata = -9999, overwrite = True,
-                    output = os.path.splitext(pathOut)[0] + '.tif')
-    print(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min')
+                    flags = 'mc', format = 'GTiff', nodata = -9999, overwrite = True,
+                    output = os.path.splitext(pathOut)[0] + '.tif', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logger.info(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min')
     
 def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ''' Reproject and change resolution of rasters
@@ -880,3 +885,125 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
                 rasOut = rasIn.rio.reproject(epsgOut, shape = (newHeight, newWidth),
                                             resampling = Resampling.bilinear)
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+
+@logger.catch
+def main(args):
+    # Remove old logger and start new one
+    logger.remove()
+    log_path = os.path.join(os.getenv('LOG_PATH', os.path.join(os.path.dirname(__file__), 'logs')), '')
+    logger.add(log_path+'kalpana.log', backtrace=True, diagnose=True)
+    logger.add(sys.stdout, level="DEBUG")
+    logger.add(sys.stderr, level="ERROR")
+
+    # get input variables common to both meshRepLen2raster and runStatic from args
+    runScript = args.runScript
+    epsgIn = args.epsgIn
+    epsgOut = args.epsgOut
+    pathOut = args.pathOut
+    grassVer = args.grassVer
+    pathRasFiles = args.pathRasFiles
+    rasterFiles = args.rasterFiles
+
+    # check if runScript is meshRepLen2raster or runStatic
+    if runScript == 'meshRepLen2raster':
+        # if runScript is meshRepLen2raster get arguments specific to that process
+        fort14 = args.fort14
+        sbFile = args.sbFile
+
+        #log start of meshRepLen2raster run 
+        logger.info('Start meshRepLen2raster with the following inputs: '+runScript+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+pathRasFiles+', '+rasterFiles)
+
+        # start meshRepLen2raster run
+        meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles,
+                  subDomain=sbFile, nameGrassLocation=None, createGrassLocation=True,
+                  createLocMethod='from_raster')
+
+    elif args.runScript == 'runStatic':
+        # if runScript is runStatic get arguments specific to that process
+        ncFile = args.ncFile
+        conLevels = args.conLevels
+        conLevelsLog = "-".join(map(str, args.conLevels))
+        meshFile = args.meshFile
+        vUnitIn = args.vUnitIn
+        vUnitOut = args.vUnitOut
+        adcircVar = args.adcircVar
+        conType = args.conType
+        if args.subDomain == 'None':
+            subDomain = None
+        elif args.subDomain == 'True':
+            subDomain = True
+        else:
+            subDomain = args.subDomain
+        exportMesh = args.exportMesh
+        dzFile = args.dzFile
+        zeroDif = float(args.zeroDif)
+        nameGrassLocation = args.nameGrassLocation
+        createGrassLocation = args.createGrassLocation
+        createLocMethod = args.createLocMethod
+        attrCol = args.attrCol
+        repLenGrowing = float(args.repLenGrowing)
+        compAdcirc2dem  = args.compAdcirc2dem
+        floodDepth = args.floodDepth
+        clumpThreshold = args.clumpThreshold
+        perMinElemArea = int(args.perMinElemArea)
+        ras2vec = args.ras2vec
+        exportOrg = args.exportOrg
+
+        # log start of runStatic run
+        logger.info('Start runScript with the following inputs: '+runScript+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+exportMesh+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+createGrassLocation+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+compAdcirc2dem+', '+floodDepth+', '+clumpThreshold+', '+str(perMinElemArea)+', '+ras2vec+', '+exportOrg)
+
+        # start runStatic run
+        runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
+             epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, exportMesh, dzFile, zeroDif,
+             nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
+             compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
+
+if __name__ == "__main__":
+    # create argument parser from argparse
+    parser = argparse.ArgumentParser()
+
+    # arguments used by both meshRepLen2raster and runStatic processes
+    parser.add_argument("--runScript", help="run script", action="store", dest="runScript", choices=['meshRepLen2raster','runStatic'], required=True)
+    parser.add_argument("--epsgIn", help="input epsg number", action="store", dest="epsgIn", required=True)           
+    parser.add_argument("--epsgOut", help="output espg numnber", action="store", dest="epsgOut", required=True) 
+    parser.add_argument("--pathOut", help="output directory path for shape file", action="store", dest="pathOut", required=True) 
+    parser.add_argument("--grassVer", help="grass version number", action="store", dest="grassVer", required=True) 
+    parser.add_argument("--pathRasFiles", help="directory path to input raster files", action="store", dest="pathRasFiles", required=True) 
+    parser.add_argument("--rasterFiles", help="file name of input raster file", action="store", dest="rasterFiles", required=True) 
+
+    # get runScript argument to use in if statement
+    args = parser.parse_known_args()[0]
+
+    if args.runScript == 'meshRepLen2raster':
+        # arguments specific to the meshRepLen2raster process
+        parser.add_argument("--fort14", help="directory path and name of fort14 file", action="store", dest="fort14", required=True)
+        parser.add_argument("--sbFile", help="directory path and name of sbFile file", action="store", dest="sbFile", required=True)
+    elif args.runScript == 'runStatic':
+        # arguments specifid to the runStatic process
+        parser.add_argument("--ncFile", help="full path of the netCDF maxele file", action="store", dest="ncFile", required=True)
+        parser.add_argument("--conLevels", help="contour levels to use in the downscaling", type=lambda s: [int(item) for item in s.split(',')], action="store", dest="conLevels", required=True)
+        parser.add_argument("--meshFile", help="full path of the raster with the mesh element size", action="store", dest="meshFile", required=True)
+        parser.add_argument("--vUnitIn", help="vertical unit of the maxele", action="store", dest="vUnitIn", choices=['m'], required=True)
+        parser.add_argument("--vUnitOut", help="vertical unit of the downscaled water levels", action="store", dest="vUnitOut", choices=['m', 'ft'], required=True)
+        parser.add_argument("--adcircVar", help="name of the maxele variable to downscale. Always 'zeta_max' for downscaling", action="store", dest="adcircVar", choices=['zeta_max'], required=True)
+        parser.add_argument("--conType", help="contours type. Always 'polygon' for downscaling", action="store", dest="conType", choices=['polygon'], required=True)
+        parser.add_argument("--subDomain", help="full path of file (kml, kmz, shp or gpkg) to crop the domain", action="store", dest="subDomain", required=True)
+        parser.add_argument("--exportMesh", help="boolean for exporting the mesh as a shape file from maxel", action="store", dest="exportMesh", choices=['True','False'], required=True)
+        parser.add_argument("--dzFile", help="full path of pickle file with vertical datum differences for all mesh nodes", action="store", dest="dzFile", required=True)
+        parser.add_argument("--zeroDif", help="threshold to do apply the vertical datum difference, below -20 vyperdatum gives weird", action="store", dest="zeroDif", required=True)
+        parser.add_argument("--nameGrassLocation", help="full path of the grass location if a existing one will be used", action="store", dest="nameGrassLocation", required=True)
+        parser.add_argument("--createGrassLocation", help="Boolean for creating grass location", action="store", dest="createGrassLocation", choices=['True','False'], required=True)
+        parser.add_argument("--createLocMethod", help="Method for assigning the crs to the grass location", action="store", dest="createLocMethod", required=True)
+        parser.add_argument("--attrCol", help="variable to downscale, can be 'zMax', 'zMean' and 'zMin'. With 'zMean', the mean value", action="store", dest="attrCol", choices=['zMax','zMean','zMin'], required=True)
+        parser.add_argument("--repLenGrowing", help="how many times the representative length the results are grown in the downscaling", action="store", dest="repLenGrowing", required=True)
+        parser.add_argument("--compAdcirc2dem", help="remove wet cells with water level below the ground surface", action="store", dest="compAdcirc2dem", choices=['True','False'], required=True)
+        parser.add_argument("--floodDepth", help="transform the water level to water depth", action="store", dest="floodDepth", choices=['True','False'], required=True)
+        parser.add_argument("--clumpThreshold", help="define clumpling threshold from mesh", action="store", dest="clumpThreshold", required=True)
+        parser.add_argument("--perMinElemArea", help="percentage of the minimum element area to scale the clumping threshold", action="store", dest="perMinElemArea", required=True)
+        parser.add_argument("--ras2vec", help="export downscaled results as shape files", action="store", dest="ras2vec", choices=['True','False'], required=True)
+        parser.add_argument("--exportOrg", help="boolean for exporing raw maxele as a DEM", action="store", dest="exportOrg", choices=['True','False'], required=True)
+
+    # parse arguments and run main
+    args = parser.parse_args()
+    main(args)
+
