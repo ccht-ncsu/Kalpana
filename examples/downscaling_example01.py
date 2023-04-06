@@ -17,7 +17,8 @@ pathOut = '/data/north_carolina/outputs/NC9.shp' ## full path of the output shap
 grassVer = 8.3 
 pathRasFiles = '/data/north_carolina/inputs/' 
 rasterFiles = 'ncDEMs_epsg6543' 
-sbFile = '/data/north_carolina/inputs/NCSubDomain.shp' ## only in 
+#sbFile = '/data/north_carolina/inputs/NCSubDomain.shp' ## only in 
+sbfile = pathRasFiles+rasterFiles
 
 meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, 
                   subDomain=sbFile, nameGrassLocation=None, createGrassLocation=True, 

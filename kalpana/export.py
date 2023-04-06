@@ -754,7 +754,7 @@ def nc2xr(ncFile, var):
     return ds
     
 def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitIn='m', epsgIn=4326,
-           subDomain=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20):
+           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20):
     ''' Run all necesary functions to export adcirc outputs as shapefiles.
         Parameters
             ncFile: string
@@ -825,8 +825,8 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     ## clip contours if requested
     if subDomain is not None:
         t0 = time.time()
-        subDom = readSubDomain(subDomain, epsgIn)
-        gdf = gpd.clip(gdf, subDom)
+        subDom = readSubDomain(subDomain, epsgSubDom)
+        gdf = gpd.clip(gdf, subDom.to_crs(epsgIn))
         logger.info(f'    Cliping contours based on mask: {(time.time() - t0)/60:0.3f} min')
     ## change vertical units if requested
     if vUnitIn == vUnitOut:
@@ -858,7 +858,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         mesh = mesh2gdf(nc, epsgIn, epsgOut)
         
         if subDomain is not None:
-            mesh = mesh.clip(mesh, subDom)
+            mesh = gpd.clip(mesh, subDom.to_crs(epsgOut))
         
         mesh.to_file(os.path.join(os.path.dirname(pathOut), f'{meshName}.shp'))
         logger.info(f'    Mesh exported: {(time.time() - t0)/60:0.3f} min')

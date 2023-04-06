@@ -58,6 +58,10 @@ conType = 'polygon' ## only in example02
 ## full path of file (kml, kmz, shp or gpkg) to crop the domain.
 subDomain = None ## only in example02
 
+## epsg code or crs of the subDomain. In this case, as we are using the downscaling dem bounding box
+## as the subdomain, the same epsg code must be specified.
+epsgSubDom = 6543
+
 ## boolean for exporting the mesh as a shape file from maxele, not necessary in this
 ## case since mesh was exported as preprocess. In example_03 it is exported.
 exportMesh = False ## only in example02
@@ -109,6 +113,6 @@ exportOrg = False ## only in example02
 
 #################### calling downscaling
 runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
-          epsgIn, vUnitIn, vUnitOut, var, conType, subDomain, exportMesh, dzFile, zeroDif, 
-          nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing, 
+          epsgIn, vUnitIn, vUnitOut, var, conType, subDomain, epsgSubDom, exportMesh, dzFile, 
+          zeroDif, nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing, 
           compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
