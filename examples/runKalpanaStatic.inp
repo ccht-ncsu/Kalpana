@@ -1,0 +1,23 @@
+## ******* INPUTS FOR RUNNING KALPANA DOWNSCALING SCRIPT *********
+#### the script is line-order sensitive, so do not add or move lines
+#### do not include empty spaces!
+north_carolina ## state #0
+NC9 ## name of mesh of the ADCIRC run #1
+florence ## name of the storm #2
+1 ## advisory number #3
+0,15,1 ## water levels to downscale #4
+6543 ## CRS of the downscaling DEM #5
+ncDEMs_epsg6543 ## file name of the downscalign DEM #6
+NC9.tif ## file name of the mesh DEM #7
+4326 ## crs of the adcirc simulation #8
+ft ## vertical unit of the downscalign DEM #9
+ncDEMs_epsg6543 ## subdomain to crop adcirc results #10
+6543 #11
+False ## export mesh, true only if it is first downscaling task for this mesh #12
+NC9mesh_from_tss2navd88.pkl ## file with difference between vertical datums #13
+1.0 ## growing factor. 1 means resoluts are expanded 1 element size. #14
+True ## remove wet cells below ground surface #15
+False ## water level to depth #16
+from_mesh ## clumping threshold is obtained from mesh elements size #17
+1 ## percentage of the min elemen area used as clumping threshold #18
+False ## export downscaled raster as shape file #19
