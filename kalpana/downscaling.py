@@ -866,7 +866,9 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ## reproject if raster is in wgs84 (lat/lon)
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
+        logger.info('Write '+bname+' to COG') 
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG")
+        logger.info('Wrote '+bname+' to COG') 
     ## change resolution
     else:
         scaleFactor = rasIn.rio.resolution()[0] / res
@@ -877,7 +879,9 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
         if epsgOut == None:
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'))
+            logger.info('Write '+bname+' to COG') 
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'), driver="COG")
+            logger.info('Wrote '+bname+' to COG') 
         
         ## change crs
         else:
@@ -893,7 +897,9 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             else:
                 rasOut = rasIn.rio.reproject(epsgOut, shape = (newHeight, newWidth),
                                             resampling = Resampling.bilinear)
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+            logger.info('Write '+bname+' to COG')
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'), driver="COG")
+            logger.info('Wrote '+bname+' to COG') 
 
 @logger.catch
 def main(args):
