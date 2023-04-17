@@ -926,7 +926,7 @@ def main(args):
         sbFile = args.sbFile
 
         #log start of meshRepLen2raster run 
-        logger.info('Start meshRepLen2raster with the following inputs: '+runScript+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+pathRasFiles+', '+rasterFiles+", "+sbFile)
+        logger.info('Start meshRepLen2raster with the following inputs: '+runScript+', '+fort14+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+pathRasFiles+', '+rasterFiles+", "+sbFile)
 
         # start meshRepLen2raster run
         meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles,
