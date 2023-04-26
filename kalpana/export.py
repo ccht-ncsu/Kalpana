@@ -629,8 +629,7 @@ def readSubDomain(subDomain, epsg):
         ## define gdf
         gdfSubDomain = gpd.GeoDataFrame(geometry = [poly], crs = epsg)
     else:
-        logger.info('subDomain must be the path of a kml or shapefile, or a list with the coordinates of ' \ 
-              'the upper left and lower right corners of a box') # Changed
+        logger.info('subDomain must be the path of a kml or shapefile, or a list with the coordinates of the upper left and lower right corners of a box') # Changed
         sys.exit(-1)
     
     return gdfSubDomain
