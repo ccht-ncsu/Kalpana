@@ -8,10 +8,6 @@
     # vis_mesh: Plots a mesh contained in a GeoDataframe object.
     # merge_cmap: Combines two matplotlib colormaps into one continuous colormap.
 
-## Specific Functions for Examples:
-    # plot_maxele, plot_polygons, polygon_compare plot_polylines, polyline_compare, plot_overlay, plot_mesh
-    # Utilize above 'vis' functions for specific examples in this repository.
-
 
 import geopandas as gpd
 import numpy as np
@@ -29,8 +25,6 @@ import cmocean.cm as cmo
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-
-## general plotting functions
 
 def vis_netcdf(nc, var, levels, xlims = None, ylims = None, 
            ax = None, fig = None, fsize = (8, 6), 
@@ -266,7 +260,8 @@ def vis_plines(gdf, levels, xlims = None, ylims = None,
 def vis_mesh(gdf, var = 'zmean', xylims = None, 
               ax = None, fig = None, fsize = (8,6), 
               cbar = True, cmap = None, cbar_label = None, 
-              vmin = None, vmax = None, ticks = None, background_map = True):
+              vmin = None, vmax = None, ticks = None, 
+              topo = False, background_map = True):
     ''' Funtion to create 2D plots from a GeoDataframe that represents a mesh.
     Parameters
         gdf: GeoDataframe object
@@ -288,6 +283,8 @@ def vis_mesh(gdf, var = 'zmean', xylims = None,
             colorbar label
         ticks: list
             colorbar ticks
+        topo: boolean
+            True to only plot elevations greater than 0.
         background_map: boolean
             True for using cartopy to plot a background map, doesn't work on the HPC
     Returns
@@ -298,6 +295,9 @@ def vis_mesh(gdf, var = 'zmean', xylims = None,
         mygdf = gpd.clip(gdf, [xylims[0]-0.5,xylims[2]-0.5,xylims[1]+0.5,xylims[3]+0.5])
     else:
         mygdf = gdf
+
+    if topo:
+        mygdf = mygdf[mygdf['zmean'] > 0]
 
     if ax == None and background_map == False:
         fig, ax = plt.subplots(figsize = fsize)
@@ -319,20 +319,23 @@ def vis_mesh(gdf, var = 'zmean', xylims = None,
 
     vmin = vmin if vmin is not None else min(mygdf[var])
     vmax = vmax if vmax is not None else max(mygdf[var])
+    ticks = ticks if ticks is not None else None
 
-    if var == 'zmean':
-        if cmap == None:
-
+    if var == 'zmean' and cmap == None:
+        if topo:
+            cmap = cmo.tools.crop_by_percent(cmo.speed_r, 25, 'max')
+            offset = None
+        else:
             cmap = merge_cmap(cmo.tools.crop_by_percent(cmo.ice, 30, 'max'), cmo.tools.crop_by_percent(cmo.speed_r, 25, 'max'))            
             offset = mcolors.TwoSlopeNorm(vmin=vmin,vcenter=0,vmax=vmax)
 
-            mygdf.plot(column = var, legend = cbar, ax = ax, aspect = 'equal', cmap = cmap, norm = offset, vmin = vmin, vmax = vmax,
-                legend_kwds={'label': cbar_label if cbar_label != None else None, 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks if ticks is not None else None},
-                )
-
+        mygdf.plot(column = var, legend = cbar, ax = ax, aspect = 'equal', cmap = cmap, norm = offset if topo else None, vmin = vmin, vmax = vmax,
+            legend_kwds={'label': cbar_label if cbar_label != None else None, 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks},
+            )
+            
     else:
-        mygdf.plot(column = var, legend = cbar, ax = ax, aspect = 'equal', cmap = 'viridis' if cmap == None else cmap, edgecolor='black', linewidth = 0.2, vmin = vmin, vmax = vmax,
-                legend_kwds={'label': cbar_label if cbar_label != None else None, 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks if ticks is not None else None},
+        mygdf.plot(column = var, legend = cbar, ax = ax, aspect = 'equal', cmap = cmap, edgecolor='black', linewidth = 0.2, vmin = vmin, vmax = vmax,
+                legend_kwds={'label': cbar_label if cbar_label != None else None, 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks},
                 )
 
     return ax
@@ -351,76 +354,3 @@ def merge_cmap(cmap1, cmap2):
     colors2 = cmap2(np.linspace(0, 1, 128))
     colors = np.vstack((colors1, colors2))
     return mcolors.LinearSegmentedColormap.from_list('my_colormap', colors)
-
-
-## specific functions for visualizations in these examples
-    # these implement the 4 above 'vis' functions
-
-def plot_maxele(nc, levels):
-    fig, ax = plt.subplots(figsize = (8,4), nrows = 1, ncols = 2,  subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_netcdf(nc, 'zeta_max', levels, ax = ax[0], cbar = False, point_circle = Point(-76.8, 35.2))
-    ax[0].set_xlabel('Longitude [deg]')
-    ax[0].set_ylabel('Latitude [deg]')
-    ax[0].set_title('Full Domain')
-    vis_netcdf(nc, 'zeta_max', levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[1], fig = fig, cbar = True, cbar_label = 'Max water level [m MSL]', ticks = np.arange(levels[0]-0.25, levels[1]+0.25, levels[2]))
-    ax[1].set_xlabel('Longitude [deg]')
-    ax[1].set_ylabel('Latitude [deg]')
-    ax[1].set_title('North Carolina')
-    fig.suptitle('Maximum Water Levels (Florence)', fontsize = 16)
-
-def plot_polygons(gdf, levels):
-    fig, ax = plt.subplots(figsize = (8,4), nrows = 1, ncols = 2, subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_pgons(gdf, levels, xlims = [-98, -60], ylims = [8, 46], ax = ax[0], fig = fig, fsize = (8,6), cbar = False, point_circle = Point((-76.8, 35.2)))
-    ax[0].set_xlabel('Longitude [deg]')
-    ax[0].set_ylabel('Latitude [deg]')       
-    vis_pgons(gdf, levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[1], fig = fig, fsize = (8,6), cbar = True,  cbar_label = 'Max water level [m MSL]')
-    ax[1].set_xlabel('Longitude [deg]')
-    ax[1].set_ylabel('Latitude [deg]')
-    fig.suptitle(f'Polygon Contours created from nc2shp()', fontsize = 16)
-
-def polygon_compare(nc, gdf, levels):
-    fig, ax = plt.subplots(figsize = (9,4.5), nrows = 1, ncols = 2,  subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_netcdf(nc, 'zeta_max', levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[0], fig = fig, cbar = True, cbar_label = 'Max water level [m MSL]', ticks = np.arange(levels[0]-0.25, levels[1]+0.25, levels[2]))
-    ax[0].set_xlabel('Longitude [deg]')
-    ax[0].set_ylabel('Latitude [deg]')
-    ax[0].set_title('Florence Maximum Water Levels')
-    vis_pgons(gdf, levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[1], fig = fig, fsize = (8,6), cbar = True,  cbar_label = 'Max water level [m MSL]')
-    ax[1].set_xlabel('Longitude [deg]')
-    ax[1].set_ylabel('Latitude [deg]')
-    ax[1].set_title('Polygon Contours from nc2shp()')
-
-def plot_polylines(gdf, levels):
-    fig, ax = plt.subplots(figsize = (9,4.5), nrows = 1, ncols = 2, subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_plines(gdf, levels, xlims = [-98, -60], ylims = [8, 46], ax = ax[0], fig = fig, fsize = (8,6), cbar = False, point_circle = Point((-76.8, 35.2)))
-    ax[0].set_xlabel('Longitude [deg]')
-    ax[0].set_ylabel('Latitude [deg]')       
-    vis_plines(gdf, levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[1], fig = fig, fsize = (8,6), cbar = True,  cbar_label = 'Max water level [m MSL]')
-    ax[1].set_xlabel('Longitude [deg]')
-    ax[1].set_ylabel('Latitude [deg]')
-    fig.suptitle(f'Polygon Contours created from nc2shp()', fontsize = 16)
-
-def polyline_compare(nc, gdf, levels):
-    fig, ax = plt.subplots(figsize = (9,4.5), nrows = 1, ncols = 2,  subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_netcdf(nc, 'zeta_max', [levels[0]+0.25, levels[1]+0.75, levels[2]], xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[0], fig = fig, cbar = True, cbar_label = 'Max water level [m MSL]', ticks = np.arange(levels[0], levels[1]+levels[2]+0.5, levels[2]))
-    ax[0].set_xlabel('Longitude [deg]')
-    ax[0].set_ylabel('Latitude [deg]')
-    ax[0].set_title('Florence Maximum Water Levels')
-    vis_plines(gdf, levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax[1], fig = fig, fsize = (8,6), cbar = True,  cbar_label = 'Max water level [m MSL]')
-    ax[1].set_xlabel('Longitude [deg]')
-    ax[1].set_ylabel('Latitude [deg]')
-    ax[1].set_title('Polygon Contours from nc2shp()')
-
-def plot_overlay(nc, gdf, levels):
-    fig, ax = plt.subplots(figsize = (5,5), nrows = 1, ncols = 1,  subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_netcdf(nc, 'zeta_max', [levels[0]+0.25, levels[1]+0.75, levels[2]], xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax, fig = fig, cbar = True, cbar_label = 'Max water level [m MSL]', ticks = np.arange(levels[0], levels[1]+levels[2]+0.5, levels[2]))
-    vis_plines(gdf, levels, xlims = [-78.5, -75], ylims = [33.5, 37], ax = ax, fig = fig, fsize = (5,5), outline = True)
-    ax.set_xlabel('Longitude [deg]')
-    ax.set_ylabel('Latitude [deg]')
-    ax.set_title('Polylines over Florence Max Flooding Levels')
-
-def plot_mesh(gdf, var, xlims, ylims, title, cbar_label, vmin = None, vmax = None, ticks = None, background_map = True):
-    fig, ax = plt.subplots(figsize = (8,6), nrows = 1, ncols = 1, subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
-    vis_mesh(gdf, var, xylims = xlims + ylims, ax = ax, fig = fig, fsize = (8,6), cbar_label = cbar_label, vmin = vmin, vmax = vmax, ticks = ticks, background_map = background_map)
-    ax.set_xlabel('Longitude [deg]')
-    ax.set_ylabel('Latitude [deg]')
-    fig.suptitle(title, fontsize = 16)

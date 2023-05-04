@@ -1,5 +1,6 @@
 import shutil
 import os
+import glob # Changed
 import argparse # Changed
 import subprocess
 import sys
@@ -1016,6 +1017,17 @@ def main(args):
         else:
             logger.info('exportOrg value has to be True or False')
 
+        # Create outputs directory for second process shape, and tiff files
+        outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
+        finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
+        if not os.path.exists(outputDir):
+            mode = 0o777
+            os.makedirs(outputDir, mode, exist_ok=True)
+            os.makedirs(finalDir, mode, exist_ok=True)
+            logger.info('Made directories '+outputDir+ ' and '+finalDir+'.')
+        else:
+            logger.info('Directories '+outputDir+' and '+finalDir+' already made.')
+
         # log start of runStatic run
         logger.info('Start runScript with the following inputs: '+runScript+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
 
@@ -1024,6 +1036,15 @@ def main(args):
              epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, epsgSubDom, exportMesh, dzFile, zeroDif,
              nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
              compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
+
+        #  move cog tiff to final directory
+        for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
+            try:
+                shutil.move(finalPathFile, finalDir)
+                logger.info('Moved cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+            except OSError as err:
+                logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+                sys.exit(1)
 
 if __name__ == "__main__":
     # create argument parser from argparse
