@@ -914,15 +914,17 @@ def main(args):
 
     # get input variables common to both meshRepLen2raster and runStatic from args
     runScript = args.runScript
-    epsgIn = args.epsgIn
-    epsgOut = args.epsgOut
-    pathOut = args.pathOut
-    grassVer = args.grassVer
-    pathRasFiles = args.pathRasFiles
-    rasterFiles = args.rasterFiles
 
     # check if runScript is meshRepLen2raster or runStatic
     if runScript == 'meshRepLen2raster':
+        # variables not specific the meshRepLen2raster
+        epsgIn = args.epsgIn
+        epsgOut = args.epsgOut
+        pathOut = args.pathOut
+        grassVer = args.grassVer
+        pathRasFiles = args.pathRasFiles
+        rasterFiles = args.rasterFiles
+
         # if runScript is meshRepLen2raster get arguments specific to that process
         fort14 = args.fort14
         sbFile = args.sbFile
@@ -935,7 +937,78 @@ def main(args):
                   subDomain=sbFile, nameGrassLocation=None, createGrassLocation=True,
                   createLocMethod='from_raster')
 
+    elif args.runScript == 'runStaticShort':
+        # define runStatic input variables
+        modelRunID = args.modelRunID
+        pathOut = '/data/'+modelRunID+'/kalpana/maxele.shp'
+        ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
+        epsgIn = 4326
+        epsgOut = 6543
+        grassVer = '8.2'
+        pathRasFiles = '/data/kalpana/north_carolina/inputs/'
+        rasterFiles = 'ncDEMs_epsg6543'
+        conLevels = [0, 11, 1] 
+        conLevelsLog = "-".join(map(str, conLevels))
+        meshFile = '/data/kalpana/north_carolina/inputs/NCSC123.tif' 
+        vUnitIn = 'm'
+        vUnitOut = 'ft'
+        adcircVar = 'zeta_max'
+        conType = 'polygon'
+        subDomain = '/data/kalpana/north_carolina/inputs/ncDEMs_epsg6543'
+        epsgSubDom = 6543
+        exportMesh = False
+        dzFile = '/data/kalpana/north_carolina/inputs/NCSC_SAB_123_msl2navd88.pkl'
+        zeroDif = -20.0
+        nameGrassLocation = 'grassLoc'
+        createGrassLocation = True 
+        createLocMethod = 'from_raster'
+        attrCol = 'zMean'
+        repLenGrowing = 1.0
+        compAdcirc2dem = True
+        floodDepth = False
+        clumpThreshold = 'from_mesh'
+        perMinElemArea = 1
+        ras2vec = False
+        exportOrg = False
+
+        # Create outputs directory for second process shape, and tiff files
+        outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
+        finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
+        if not os.path.exists(outputDir):
+            mode = 0o777
+            os.makedirs(outputDir, mode, exist_ok=True)
+            os.makedirs(finalDir, mode, exist_ok=True)
+            logger.info('Made directories '+outputDir+ ' and '+finalDir+'.')
+        else:
+            logger.info('Directories '+outputDir+' and '+finalDir+' already made.')
+
+        # log start of runStatic run
+        logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
+
+        # start runStatic run
+        runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
+             epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, epsgSubDom, exportMesh, dzFile, zeroDif,
+             nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
+             compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
+
+        #  move cog tiff to final directory
+        for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
+            try:
+                shutil.move(finalPathFile, finalDir)
+                logger.info('Moved cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+            except OSError as err:
+                logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+                sys.exit(1)
+
     elif args.runScript == 'runStatic':
+        # variables not specific the runStatic
+        epsgIn = args.epsgIn
+        epsgOut = args.epsgOut
+        pathOut = args.pathOut
+        grassVer = args.grassVer
+        pathRasFiles = args.pathRasFiles
+        rasterFiles = args.rasterFiles
+
         # if runScript is runStatic get arguments specific to that process
         ncFile = args.ncFile
         conLevels = args.conLevels
@@ -1051,22 +1124,34 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # arguments used by both meshRepLen2raster and runStatic processes
-    parser.add_argument("--runScript", help="run script", action="store", dest="runScript", choices=['meshRepLen2raster','runStatic'], required=True)
-    parser.add_argument("--epsgIn", help="input epsg number", action="store", dest="epsgIn", required=True)           
-    parser.add_argument("--epsgOut", help="output espg numnber", action="store", dest="epsgOut", required=True) 
-    parser.add_argument("--pathOut", help="output directory path for shape file", action="store", dest="pathOut", required=True) 
-    parser.add_argument("--grassVer", help="grass version number", action="store", dest="grassVer", required=True) 
-    parser.add_argument("--pathRasFiles", help="directory path to input raster files", action="store", dest="pathRasFiles", required=True) 
-    parser.add_argument("--rasterFiles", help="file name of input raster file", action="store", dest="rasterFiles", required=True) 
+    parser.add_argument("--runScript", help="run script", action="store", dest="runScript", choices=['meshRepLen2raster','runStaticShort','runStatic'], required=True)
 
     # get runScript argument to use in if statement
     args = parser.parse_known_args()[0]
 
     if args.runScript == 'meshRepLen2raster':
+        # arguments not specific to the meshRepLen2raster process
+        parser.add_argument("--epsgIn", help="input epsg number", action="store", dest="epsgIn", required=True)
+        parser.add_argument("--epsgOut", help="output espg numnber", action="store", dest="epsgOut", required=True)
+        parser.add_argument("--pathOut", help="output directory path for shape file", action="store", dest="pathOut", required=True)
+        parser.add_argument("--grassVer", help="grass version number", action="store", dest="grassVer", required=True)
+        parser.add_argument("--pathRasFiles", help="directory path to input raster files", action="store", dest="pathRasFiles", required=True)
+        parser.add_argument("--rasterFiles", help="file name of input raster file", action="store", dest="rasterFiles", required=True)
+
         # arguments specific to the meshRepLen2raster process
         parser.add_argument("--fort14", help="directory path and name of fort14 file", action="store", dest="fort14", required=True)
         parser.add_argument("--sbFile", help="directory path and name of sbFile file", action="store", dest="sbFile", required=True)
+    elif args.runScript == 'runStaticShort':
+        parser.add_argument("--modelRunID", help="the modelRunID, which is a combination of the instance_id and uid", action="store", dest="modelRunID", required=True)
     elif args.runScript == 'runStatic':
+        # arguments not specific to the meshRepLen2raster process
+        parser.add_argument("--epsgIn", help="input epsg number", action="store", dest="epsgIn", required=True)
+        parser.add_argument("--epsgOut", help="output espg numnber", action="store", dest="epsgOut", required=True)
+        parser.add_argument("--pathOut", help="output directory path for shape file", action="store", dest="pathOut", required=True)
+        parser.add_argument("--grassVer", help="grass version number", action="store", dest="grassVer", required=True)
+        parser.add_argument("--pathRasFiles", help="directory path to input raster files", action="store", dest="pathRasFiles", required=True)
+        parser.add_argument("--rasterFiles", help="file name of input raster file", action="store", dest="rasterFiles", required=True)
+
         # arguments specifid to the runStatic process
         parser.add_argument("--ncFile", help="full path of the netCDF maxele file", action="store", dest="ncFile", required=True)
         parser.add_argument("--conLevels", help="contour levels to use in the downscaling", type=lambda s: [int(item) for item in s.split(',')], action="store", dest="conLevels", required=True)
