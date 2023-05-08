@@ -13,6 +13,7 @@ import rioxarray as rxr
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain # Changed
+from datacube.utils.cog import write_cog
 from loguru import logger # Changed 
 
 '''
@@ -869,8 +870,9 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
         logger.info('Write '+bname+' to COG') # Changed
-        #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
+        #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
+        #write_cog(geo_im=rasOut,fname=os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'),overwrite=True)
         logger.info('Wrote '+bname+' to COG') # Changed
     ## change resolution
     else:
@@ -920,37 +922,37 @@ def geotiff2cog(inputPathFile, finalDir):
     cmds_list = []
 
     # Check if inputPathFiles list has values
-    if len(inputPathFiles) > 0:
-        for inputPathFile in inputPathFiles:
-            if os.path.exists(inputPathFile):
-                # Log inputPathFile
-                logger.info('The inputPathFile '+inputPathFile.strip()+' so create cog file.')
+    if len(inputPathFile) > 0:
+        if os.path.exists(inputPathFile):
+            # Log inputPathFile
+            logger.info('The inputPathFile '+inputPathFile.strip()+' exists, so create cog file.')
 
-                # Define ouput cog file name
-                inputFileList = inputPathFile.split('/')[-1].split('.')
-                inputFileList.insert(-1,'cog')
-                outputFile = ".".join(inputFileList)
+            # Define ouput cog file name
+            inputFileList = inputPathFile.split('/')[-1].split('.')
+            inputFileList.insert(-1,'cog')
+            outputFile = ".".join(inputFileList)
 
-                # Remove cog file if it already exits
-                if os.path.exists(inputDir+outputFile):
-                    os.remove(inputDir+outputFile)
-                    logger.info('Removed old cog file '+inputDir+outputFile+'.')
-                    logger.info('Cogeo path '+inputDir+outputFile+'.')
-                else:
-                    logger.info('Cogeo path '+inputDir+outputFile+'.')
-
-                # Define command to create cog
-                cmds_list.append(['rio', 'cogeo', 'create',  inputPathFile, finalDir+outputFile, '--web-optimized'])
+            # Remove cog file if it already exits
+            if os.path.exists(finalDir+outputFile):
+                os.remove(finalDir+outputFile)
+                logger.info('Removed old cog file '+finalDir+outputFile+'.')
+                logger.info('Cogeo path '+finalDir+outputFile+'.')
             else:
-                logger.info('The inputPathFile '+inputPathFile+' does not exist.')
-                sys.exit(1)
+                logger.info('Cogeo path '+finalDir+outputFile+'.')
+
+            # Define command to create cog
+            logger.info('Run rio cogeo create '+inputPathFile+' '+finalDir+outputFile+' --web-optimized')
+            cmds_list.append(['rio', 'cogeo', 'create',  inputPathFile, finalDir+outputFile, '--web-optimized'])
+        else:
+            logger.info('The inputPathFile '+inputPathFile+' does not exist.')
+            sys.exit(1)
     else:
         logger.info('inputPathFiles list has not values')
         sys.exit(1)
 
     # Define number of CPU to use in pool.
     logger.info('Create pool.')
-    pool = Pool(processes=4)
+    pool = Pool(processes=3)
     logger.info('Pool created.')
 
     # Apply cmds_list to pool, and output to resutls
@@ -1076,6 +1078,16 @@ def main(args):
                 logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
                 sys.exit(1)
 
+        # create cog and move cog tiff to final directory
+        """for inputPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
+            try:
+                #shutil.move(finalPathFile, finalDir)
+                geotiff2cog(inputPathFile, finalDir)
+                logger.info('Created cog file '+inputPathFile.split("/")[-1]+' and move to '+finalDir+' directory.')
+            except OSError as err:
+                logger.error('Failed to create cog file '+inputPathFile.split("/")[-1]+' and move to '+finalDir+' directory.')
+                sys.exit(1)"""
+
     elif args.runScript == 'runStatic':
         # variables not specific the runStatic
         epsgIn = args.epsgIn
@@ -1188,14 +1200,12 @@ def main(args):
 
         # create cog 
         # move cog tiff to final directory
-        #for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
-        for inputPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
+        for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
             try:
-                #shutil.move(finalPathFile, finalDir)
-                geotiff2cog(inputPathFile, finalDir)
-                logger.info('Created cog file '+inputPathFile.split("/")[-1]+' and move to '+finalDir+' directory.')
+                shutil.move(finalPathFiles, finalDir)
+                logger.info('Created cog file '+finalPathFiles.split("/")[-1]+' and move to '+finalDir+' directory.')
             except OSError as err:
-                logger.error('Failed to create cog file '+finalPathFile.split("/")[-1]+' and move to '+finalDir+' directory.')
+                logger.error('Failed to create cog file '+finalPathFiles.split("/")[-1]+' and move to '+finalDir+' directory.')
                 sys.exit(1)
 
 if __name__ == "__main__":
