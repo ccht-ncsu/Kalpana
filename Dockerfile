@@ -46,11 +46,11 @@ ENV SHELL /bin/bash
 # Add user kalpana; -u xxxx (1324)  is specific to running on a RENCI VM. It
 # enables writing to the /projects directory. To use change 1324 to your user ID.
 # If not on a RENCI VM use RUN adduser -D kalpana kalpana.
-#RUN adduser -D kalpana -u 1324 kalpana
-RUN adduser -D kalpana kalpana
+#RUN adduser -D nru -u 1324 nru
+RUN adduser -D nru -u 1000 nru
 
-# Make working directory /home/kalpana.
-WORKDIR /home/kalpana
+# Make working directory /home/nru.
+WORKDIR /home/nru
 
 # Update conda.
 RUN conda update conda
@@ -62,11 +62,11 @@ RUN conda env create -f env_kalpana_v1.yml
 # Copy Kalpana Python scripts.
 COPY kalpana kalpana
 
-# Change owner of /home/kalpoana to kalpana.
-RUN chown -R kalpana:kalpana /home/kalpana
+# Change owner of /home/nru to nru.
+RUN chown -R nru:nru /home/nru
 
 # Make user kalpana.
-USER kalpana
+USER nru
 
 # Initialize conda using the bash shell.
 RUN conda init bash
