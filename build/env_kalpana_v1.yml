@@ -254,6 +254,4 @@ dependencies:
   - zipp=3.13.0=pyhd8ed1ab_0
   - zlib=1.2.13=h166bdaf_4
   - zstd=1.5.2=h3eb15da_6
-  - datacube=1.8.7
-  - rio-cogeo=3.4.1
   - loguru=0.6.0

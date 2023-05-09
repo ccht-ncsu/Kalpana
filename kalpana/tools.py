@@ -4,6 +4,7 @@ import pandas as pd
 from PIL import Image
 import rioxarray as rxr
 from pathlib import Path
+from itertools import islice
 
 def demToPNG(fileIn, pathOut, noData = 255, tileSize = 5_000):
     ''' Transform DEM to png
@@ -100,3 +101,17 @@ def mergeTiles(pathIn, txtFile, fileOut):
     im_all.save(fileOut)
     
     return img_arr_all
+
+def readNodes_fort14(f14):
+    ''' Fx to read the fort.14 nodes as a pandas dataframe
+        Parameters
+            f14: string
+               full path of the fort.14 file
+        Returns
+            Nodes: pandas dataframe
+    '''
+    with open(f14) as fin:
+        head = list(islice(fin, 2))
+        data = [int(x) for x in head[1].split()]
+    nodes = pd.read_csv(f14, skiprows = 2, nrows = data[1], names = ['x', 'y', 'z'], delim_whitespace = True)
+    return nodes

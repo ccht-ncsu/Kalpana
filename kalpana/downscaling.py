@@ -871,8 +871,6 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
         rasOut = rasIn.rio.reproject(epsgOut)
         logger.info('Write '+bname+' to COG') # Changed
         rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
-        #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
-        #write_cog(geo_im=rasOut,fname=os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'),overwrite=True)
         logger.info('Wrote '+bname+' to COG') # Changed
     ## change resolution
     else:
@@ -885,8 +883,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
             logger.info('Write '+bname+' to COG') # Changed
-            #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'), driver="COG") # Changed
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'), driver="COG") # Changed
             logger.info('Wrote '+bname+' to COG') # Changed
         
         ## change crs
@@ -904,81 +901,8 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
                 rasOut = rasIn.rio.reproject(epsgOut, shape = (newHeight, newWidth),
                                             resampling = Resampling.bilinear)
             logger.info('Write '+bname+' to COG') # Changed
-            #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'), driver="COG") # Changed
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'), driver="COG") # Changed
             logger.info('Wrote '+bname+' to COG') # Changed
-
-# This was added to run in k8s environment, and to create a cog
-# Function creates a process using command from cmd
-def call_proc(cmd):
-    # This runs in a separate thread
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    stdout, stderr = p.communicate()
-    return (stdout, stderr)
-
-# Function to create COG using rio command line option
-def geotiff2cog(inputPathFile, finalDir):
-    # Create empty list for commands
-    cmds_list = []
-
-    # Check if inputPathFiles list has values
-    if len(inputPathFile) > 0:
-        if os.path.exists(inputPathFile):
-            # Log inputPathFile
-            logger.info('The inputPathFile '+inputPathFile.strip()+' exists, so create cog file.')
-
-            # Define ouput cog file name
-            inputFileList = inputPathFile.split('/')[-1].split('.')
-            inputFileList.insert(-1,'cog')
-            outputFile = ".".join(inputFileList)
-
-            # Remove cog file if it already exits
-            if os.path.exists(finalDir+outputFile):
-                os.remove(finalDir+outputFile)
-                logger.info('Removed old cog file '+finalDir+outputFile+'.')
-                logger.info('Cogeo path '+finalDir+outputFile+'.')
-            else:
-                logger.info('Cogeo path '+finalDir+outputFile+'.')
-
-            # Define command to create cog
-            logger.info('Run rio cogeo create '+inputPathFile+' '+finalDir+outputFile+' --web-optimized')
-            cmds_list.append(['rio', 'cogeo', 'create',  inputPathFile, finalDir+outputFile, '--web-optimized'])
-        else:
-            logger.info('The inputPathFile '+inputPathFile+' does not exist.')
-            sys.exit(1)
-    else:
-        logger.info('inputPathFiles list has not values')
-        sys.exit(1)
-
-    # Define number of CPU to use in pool.
-    logger.info('Create pool.')
-    pool = Pool(processes=3)
-    logger.info('Pool created.')
-
-    # Apply cmds_list to pool, and output to resutls
-    logger.info('Create results array.')
-    results = []
-    for cmd in cmds_list:
-        logger.info(" ".join(cmd))
-        results.append(pool.apply_async(call_proc, (cmd,)))
-
-    logger.info('Results array created.')
-
-    # Close the pool and wait for each running task to complete
-    logger.info('Close pool.')
-    pool.close()
-    pool.join()
-    logger.info('Pool closed.')
-
-    # Output results to log
-    for result in results:
-        stdout, stderr = result.get()
-
-        if stderr:
-            logger.info("stdout: {} stderr: {}".format(stdout, stderr))
-            sys.exit(1)
-        else:
-            logger.info("stdout: {} stderr: {}".format(stdout, stderr))
 
 # This was added to run in k8s environment
 @logger.catch
@@ -1077,16 +1001,6 @@ def main(args):
             except OSError as err:
                 logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
                 sys.exit(1)
-
-        # create cog and move cog tiff to final directory
-        """for inputPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
-            try:
-                #shutil.move(finalPathFile, finalDir)
-                geotiff2cog(inputPathFile, finalDir)
-                logger.info('Created cog file '+inputPathFile.split("/")[-1]+' and move to '+finalDir+' directory.')
-            except OSError as err:
-                logger.error('Failed to create cog file '+inputPathFile.split("/")[-1]+' and move to '+finalDir+' directory.')
-                sys.exit(1)"""
 
     elif args.runScript == 'runStatic':
         # variables not specific the runStatic
