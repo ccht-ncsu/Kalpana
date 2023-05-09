@@ -13,7 +13,6 @@ import rioxarray as rxr
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain # Changed
-from datacube.utils.cog import write_cog
 from loguru import logger # Changed 
 
 '''
