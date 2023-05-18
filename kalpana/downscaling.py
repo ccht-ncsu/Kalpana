@@ -13,6 +13,7 @@ import rioxarray as rxr
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain # Changed
+import netCDF4 as nc # Changed
 from loguru import logger # Changed 
 
 '''
@@ -972,34 +973,42 @@ def main(args):
         ras2vec = False
         exportOrg = False
 
-        # Create outputs directory for second process shape, and tiff files
-        outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
-        finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
-        if not os.path.exists(outputDir):
-            mode = 0o777
-            os.makedirs(outputDir, mode, exist_ok=True)
-            os.makedirs(finalDir, mode, exist_ok=True)
-            logger.info('Made directories '+outputDir+ ' and '+finalDir+'.')
+        ds = nc.Dataset(ncFile)
+        grid = ds.agrid.split(' ')[0]
+
+        if grid == 'NCSC_SAB_v1.22':
+            logger.info('ncFile '+ncFile+' does use the NCSC_SAB_v1.22 grid so begin processing')
+
+            # Create outputs directory for second process shape, and tiff files
+            outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
+            finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
+            if not os.path.exists(outputDir):
+                mode = 0o777
+                os.makedirs(outputDir, mode, exist_ok=True)
+                os.makedirs(finalDir, mode, exist_ok=True)
+                logger.info('Made directories '+outputDir+ ' and '+finalDir+'.')
+            else:
+                logger.info('Directories '+outputDir+' and '+finalDir+' already made.')
+
+            # log start of runStatic run
+            logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
+
+            # start runStatic run
+            runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
+                 epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, epsgSubDom, exportMesh, dzFile, zeroDif,
+                 nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
+                 compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
+
+            # move cog tiff to final directory
+            for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
+                try:
+                    shutil.move(finalPathFile, finalDir)
+                    logger.info('Moved cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+                except OSError as err:
+                    logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+                    sys.exit(1)
         else:
-            logger.info('Directories '+outputDir+' and '+finalDir+' already made.')
-
-        # log start of runStatic run
-        logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
-
-        # start runStatic run
-        runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
-             epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, epsgSubDom, exportMesh, dzFile, zeroDif,
-             nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
-             compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
-
-        #  move cog tiff to final directory
-        for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
-            try:
-                shutil.move(finalPathFile, finalDir)
-                logger.info('Moved cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
-            except OSError as err:
-                logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
-                sys.exit(1)
+            logger.info('ncFile '+ncFile+' does not use the NCSC_SAB_v1.22 grid so do not process')
 
     elif args.runScript == 'runStatic':
         # variables not specific the runStatic

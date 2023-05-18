@@ -503,7 +503,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
                 else: ## original datum remains constant
                     ## change nan to -99999 and transform it to a 1D vector
                     aux = np.nan_to_num(aux, nan = -99999.0).reshape(-1)*auxMult
-                gdfi = filledContours2gpd(tri, aux, levels, epsg, False)
+                gdfi = filledContours2gpd(tri, aux, levels, epsg, stepLevel, orgMaxLevel, False)
                 ## add extra info to the gdf
                 ti = pd.Timedelta(seconds = int(ncObj['time'][t]))
                 gdfi['nTimeStep'] = [t]*len(gdfi)

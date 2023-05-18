@@ -114,4 +114,5 @@ def readNodes_fort14(f14):
         head = list(islice(fin, 2))
         data = [int(x) for x in head[1].split()]
     nodes = pd.read_csv(f14, skiprows = 2, nrows = data[1], names = ['x', 'y', 'z'], delim_whitespace = True)
+    nodes.index = [x - 1 for x in nodes.index]
     return nodes
