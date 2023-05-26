@@ -13,6 +13,36 @@
 #       docker push containers.renci.org/eds/kalpana:latest
 ##############
 # Use grass alpine image.
+FROM frolvlad/alpine-miniconda3 as build
+
+# author
+MAINTAINER Jim McManus
+
+# extra metadata
+LABEL version="v0.0.9"
+LABEL description="Kalpana image with Dockerfile."
+
+# update conda
+RUN conda update conda
+
+# Create the virtual environment
+COPY build/env_kalpana_v1.yml .
+RUN conda env create -f env_kalpana_v1.yml
+
+# install conda pack to compress this stage
+RUN conda install -c conda-forge conda-pack
+
+# conpress the virtual environment
+RUN conda-pack -n env_kalpana_v1 -o /tmp/env.tar && \
+  mkdir /venv && cd /venv && tar xf /tmp/env.tar && \
+  rm /tmp/env.tar
+
+# fix up the paths
+RUN /venv/bin/conda-unpack
+
+##############
+# stage 2: create a python implementation using the stage 1 virtual environment
+##############
 FROM mundialis/grass-py3-pdal:8.2.1-alpine
 
 # Install libraries required to install miniconda.
@@ -28,18 +58,6 @@ RUN apk --update add bash curl wget ca-certificates libstdc++ glib \
 && /usr/glibc-compat/sbin/ldconfig /lib /usr/glibc/usr/lib \
 && rm -rf glibc*apk /var/cache/apk/*
 
-# Install miniconda.
-ENV CONDA_DIR /opt/conda
-RUN apk update && apk add ca-certificates wget && update-ca-certificates \
-&& wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
-&& bash ~/miniconda.sh -b -u -p $CONDA_DIR \
-&& rm -rf ~/miniconda.sh \
-&& $CONDA_DIR/bin/conda init bash \
-&& $CONDA_DIR/bin/conda init zsh
-
-# Put conda in path so conda activate can be used.
-ENV PATH=$CONDA_DIR/bin:$PATH
-
 # Set bash as default shell.
 ENV SHELL /bin/bash
 
@@ -52,12 +70,12 @@ RUN adduser -D nru -u 1000 nru
 # Make working directory /home/nru.
 WORKDIR /home/nru
 
-# Update conda.
-RUN conda update conda
+# Copy /venv from the previous stage:
+COPY --from=build /venv /venv
 
-# Create the virtual environment.
-COPY build/env_kalpana_v1.yml .
-RUN conda env create -f env_kalpana_v1.yml
+# make the virtual environment active
+ENV VIRTUAL_ENV /venv
+ENV PATH /venv/bin:$PATH
 
 # Copy Kalpana Python scripts.
 COPY kalpana kalpana
@@ -69,5 +87,5 @@ RUN chown -R nru:nru /home/nru
 USER nru
 
 # Initialize conda using the bash shell.
-RUN conda init bash
+#RUN conda init bash
 
