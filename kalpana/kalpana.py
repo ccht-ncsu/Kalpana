@@ -1,6 +1,7 @@
 import sys
 import os
 import glob
+import shutil
 import argparse 
 import psycopg
 import pandas as pd
@@ -34,7 +35,6 @@ def getADCIRCFileNameVariables(modelRunID):
                         {'modelRunID':modelRunID})
 
             # convert query output to Pandas dataframe
-            #df = pd.DataFrame(cur.fetchall(), columns=['track_raw_fst'])
             df = pd.DataFrame.from_dict(cur.fetchall()[0], orient='columns')
 
             # Close cursor and database connection
