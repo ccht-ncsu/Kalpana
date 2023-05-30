@@ -30,11 +30,11 @@ To use the downscaling method, it is required to have *GRASS GIS* installed. *Ka
 This image has all the necessary files and has been set up to downscale *ADCIRC* simulations using *NC9* mesh on a DEM of North Carolina. It is configured to run automatically, i.e. when running the container, the downscaling scripts are executed.
 1. Install Docker, follow instructions [here](https://docs.docker.com/engine/install/).
 2. Using the terminal, pull the Docker image from Docker hub with the command below. This image can be used only for running the downscaling for a simulation donw with NC9 in North Carolina. <br>
-    'docker pull tacuevas/kalpana_nc:latest'
+    ```docker pull tacuevas/kalpana_nc:latest```
 3. Create a folder, place the maxele.63.nc and runKalpanaStatic.inp files inside, and 'cd' to it. The *inp* file is provided in this folder, and the *ADCIRC* *maxele.63.nc* file can be found [here](https://go.ncsu.edu/kalpana-example-inputs).
 4. Modify the file *runKalpanaStatic.inp* if you want to change the downscaling inputs (e.g. levels, crs, vertical unit, etc).
 5. Run the container declaring a volume so kalpana can access the folder created in *step 3*. Before running the container, check you are located in the same folder where you placed the input files. We also provide a copy of the *Python* script executed with the container is ran (*runKalpanaStatic.py*)<br>
-    'docker run -it -v "$(pwd)":/home/kalpana/inputs tacuevas/kalpana_nc:latest'
+    ```docker run -it -v "$(pwd)":/home/kalpana/inputs tacuevas/kalpana_nc:latest```
     
 
 We are working to implement this same image for other areas of the US.
@@ -47,12 +47,12 @@ The steps for running the container:
 
 1) Install Docker, follow instructions [here](https://docs.docker.com/engine/install/).
 2) To pull the image from Docker hub, use the following command on the terminal: <br>
-    'docker pull tacuevas/kalpana_m:latest'
+    ```docker pull tacuevas/kalpana_m:latest```
 3) Launch the container, use the following command on the terminal: <br>
-    'docker run -it tacuevas/kalpana_m:latest'
+    ```docker run -it tacuevas/kalpana_m:latest```
 4) *cp* all the files from your local device to the container. Follow instructions [here](https://docs.docker.com/engine/reference/commandline/cp/).
 5) Run the python scripts from the Docker container with: <br>
-    *python3 downscaling_exampleXX.py* 
+    ```python3 downscaling_exampleXX.py```
 
 Each example is explained below, remember to modify the paths!
 
