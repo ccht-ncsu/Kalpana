@@ -187,6 +187,7 @@ def main(args):
         modelRunID = args.modelRunID
         pathOut = '/data/'+modelRunID+'/kalpana/maxele.shp'
         ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
+        conLevels = [float(i) for i in args.conLevels.split(',')]
 
         # Get ADCIRC filename variables
         df = getADCIRCFileNameVariables(modelRunID)
@@ -197,7 +198,6 @@ def main(args):
         grassVer = '8.2'
         pathRasFiles = '/data/kalpana/north_carolina/inputs/'+grid+'/'
         rasterFiles = 'ncDEMs_epsg6543'
-        conLevels = [0, 11, 1] 
         conLevelsLog = "-".join(map(str, conLevels))
         meshFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC123.tif'
         vUnitIn = 'm'
@@ -496,6 +496,7 @@ if __name__ == "__main__":
         parser.add_argument("--sbFile", help="directory path and name of sbFile file", action="store", dest="sbFile", required=True)
     elif args.runScript == 'runStaticShort':
         parser.add_argument("--modelRunID", help="the modelRunID, which is a combination of the instance_id and uid", action="store", dest="modelRunID", required=True)
+        parser.add_argument("--conLevels", help="contour levels to use in the downscaling", action="store", dest="conLevels", required=True)
     elif args.runScript == 'runStatic':
         # arguments not specific to the meshRepLen2raster process
         parser.add_argument("--epsgIn", help="input epsg number", action="store", dest="epsgIn", required=True)
