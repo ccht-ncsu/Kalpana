@@ -3,7 +3,7 @@
 *Kalpana* has two main capabilities:
 
 1. Visualization: convert *ADCIRC* output as geospatial vector data for visualization using QGIS or any similar GIS software.
-2. Downscaling: transform the *ADICRC* *maxele.63.nc* file to a higher-resolution raster by considering small-scale topographic features (Rucker et. al 2021).
+2. Downscaling: transform the *ADCIRC* *maxele.63.nc* file to a higher-resolution raster by considering small-scale topographic features (Rucker et. al 2021).
 
 ## Visualization 
 
@@ -12,13 +12,13 @@ Setup for running the visualization examples (export_exampleXX.ipynb):
 2. Clone the Kalpana repository to your local device. [Here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) you can find the instructions.
 
 **Export example 01** (export_example01.ipynb)<br>
-Create contours as polygons based on the maximum flooding outputs from ADCIRC, then export the polygons as a .shp file.
+Create contours as polygons based on the maximum flooding outputs from *ADCIRC*, then export the polygons as a .shp file.
 
 **Export example 02** (export_example02.ipynb)<br>
-Create contours as polylines based on the maximum flooding outputs from ADCIRC, then export the polylines as a .shp file.
+Create contours as polylines based on the maximum flooding outputs from *ADCIRC*, then export the polylines as a .shp file.
 
 **Export example 03** (export_example03.ipynb)<br>
-Read fort.14 file as a GeoPandas GeoDataFrame, then export it as .shp file and some visualizations.
+Read *fort.14* file as a GeoPandas GeoDataFrame, then export it as .shp file and some visualizations.
 
 **More examples are comming soon**
 
