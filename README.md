@@ -23,5 +23,5 @@ As part of the downscaling, the water surface can be expanded outward to interse
 ## Updated version
 
 Kalpana was updated to python 3 and upgraded by Tomás Cuevas as a part of his MSc research. 
-Instructions for using Kalpana can be found in the examples folder. 
+Instructions for using Kalpana can be found in the examples folder, including a few Jupyter notebooks created by Brandon Tucker. 
 For any question, comment or suggestion please send an email to tomascuevas@gmail.com or open an *Issue*.
