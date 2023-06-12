@@ -11,6 +11,8 @@ from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain # Changed
 from loguru import logger # Changed 
+from subprocess import Popen, PIPE, STDOUT
+from multiprocessing.pool import ThreadPool as Pool
 
 '''
     All functions using GRASS GRIS has an argument 'pkg' which is the grass package.
@@ -20,6 +22,13 @@ from loguru import logger # Changed
     
     EXPLAIN WORKFLOW
 '''
+
+def call_proc(cmd):
+    # This runs in a separate thread
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+    stdout, stderr = p.communicate()
+    return (stdout, stderr)
+
 def delFiles(listFiles, typeFiles, pkg):
     ''' Delete files form a grass location
         Parameters
@@ -865,8 +874,33 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ## reproject if raster is in wgs84 (lat/lon)
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
-        logger.info('Write '+bname+' to COG') # Changed
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
+        logger.info('Reproject '+bname+' to EPSG 4326') # Changed
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif')) # Changed
+        cmds_list = [] # Changed
+        logger.info('Create cmds_list to run gdal_translate, and convert TIFF to COG')
+        cmds_list.append(['gdal_translate',os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif'),os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'),'-of','COG','-co','COMPRESS=LZW']) # Changed
+         
+        # Define number of CPU to use in pool.
+        logger.info('Create pool.') # Changed
+        pool = Pool(processes=4) # Changed
+        logger.info('Pool created.') # Changed
+
+        # Apply cmds_list to pool, and output to resutls
+        logger.info('Create results array.') # Changed
+        results = [] # Changed
+        for cmd in cmds_list: 
+            logger.info(" ".join(cmd)) # Changed
+            logger.info('Convert '+os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif')+' to COG with filename '+os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
+            results.append(pool.apply_async(call_proc, (cmd,))) # Changed
+
+        logger.info('Results array created.') # Changed
+
+        # Close the pool and wait for each running task to complete
+        logger.info('Close pool.') # Changed
+        pool.close() # Changed
+        pool.join() # Changed
+        logger.info('Pool closed.') # Changed
+   
         logger.info('Wrote '+bname+' to COG') # Changed
     ## change resolution
     else:
