@@ -80,6 +80,11 @@ ENV PATH /venv/bin:$PATH
 # Copy Kalpana Python scripts.
 COPY kalpana kalpana
 
+# Set GDAL env variables
+ENV GDAL_DATA=/venv/share/gdal
+ENV GDAL_DRIVER_PATH=/venv/lib/gdalplugins
+ENV PROJ_LIB=/venv/share/proj
+
 # Change owner of /home/nru to nru.
 RUN chown -R nru:nru /home/nru
 

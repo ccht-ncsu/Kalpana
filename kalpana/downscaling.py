@@ -11,6 +11,7 @@ from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain # Changed
 from loguru import logger # Changed 
+from subprocess import Popen, PIPE, STDOUT
 
 '''
     All functions using GRASS GRIS has an argument 'pkg' which is the grass package.
@@ -20,6 +21,13 @@ from loguru import logger # Changed
     
     EXPLAIN WORKFLOW
 '''
+
+def call_proc(cmd):
+    # This runs in a separate thread
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+    stdout, stderr = p.communicate()
+    return (stdout, stderr)
+
 def delFiles(listFiles, typeFiles, pkg):
     ''' Delete files form a grass location
         Parameters
@@ -865,13 +873,22 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ## reproject if raster is in wgs84 (lat/lon)
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
-        logger.info('Write '+bname+' to COG') # Changed
-        try:
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
-        except (Exception, psycopg.DatabaseError) as error:
-            # If error hard exit
-            logger.info(error)
-            sys.exit(0)
+        logger.info('Reproject '+bname+' to EPSG 4326') # Changed
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif')) # Changed
+        program_list = [] # Changed
+        logger.info('Create program_list to run gdal_translate, and convert TIFF to COG')
+        program_list.append(['gdal_translate',os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif'),os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'),'-of','COG','-co','COMPRESS=LZW']) # Changed
+         
+        # Apply cmds_list to pool, and output to resutls
+        for program in program_list: 
+            logger.info('Run '+" ".join(program))
+            logger.info('Convert '+os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif')+' to COG with filename '+os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
+            try:
+                output = subprocess.run(program, shell=False, check=True)
+            except Exception as e:
+                logger.info(e)
+                sys.exit(0)
+            logger.info('Ran '+" ".join(program)+" with output returncode "+str(output.returncode))
 
         logger.info('Wrote '+bname+' to COG') # Changed
     ## change resolution
