@@ -769,7 +769,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
             pathRasters: str
                 path of the raster files
             rasterFiles: list or str
-                name(s) of the raster file(s).
+                name(s) of the raster file(s). If 'all' is input, all files in pathRasters are used
             subDomain: str or list. Default None
                 complete path of the subdomain polygon kml or shapelfile, or list with the
                 uper-left x, upper-left y, lower-right x and lower-right y coordinates. The crs must be the same of the
@@ -815,6 +815,10 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
 
     print(f'    Start Setup grass environment')
     t11 = time.time()
+    
+    if rasterFiles == 'all':
+        rasterFiles = os.listdir(pathRasFiles)
+        
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
