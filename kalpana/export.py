@@ -381,7 +381,7 @@ def contours2gpd(tri, data, levels, epsg, pbar=False):
     
     return gdf
 
-def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel, dzFile=None, zeroDif=-20):
+def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel, dzFile=None, zeroDif=-20, timesteps=None):
     ''' Run "contours2gpd" or "filledContours2gpd" if npro = 1 or "contours2gpd_mp" or "filledContours2gpd_mp" if npro > 1.
         Parameters
             ncObj: netCDF4._netCDF4.Dataset
@@ -404,6 +404,8 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
                 this value won't be changed.
+            timesteps: numpy array. Default None
+                timesteps to extract if the ncObj is a time-varying ADCIRC output file. If None, all time steps are exported
         Returns
             gdf: GeoDataFrame
                 Polygons or polylines as geometry columns. If the requested file is time-varying the GeoDataFrame will include all timesteps.
@@ -461,13 +463,15 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
     ## time varying
     else:
         ## get epoch
+        if timesteps is None:
+            timesteps = range(ncObj['time'].shape[0])
         t0 = pd.to_datetime(ncObj['time'].units.split('since ')[1])
         listGdf = []
         ## non-filled contours
         if conType == 'polyline':
             labelCol = 'z'
             ## time loop
-            for t in tqdm(range(ncObj['time'].shape[0])):
+            for t in tqdm(timesteps):
                 ## data to 1D non masked array
                 aux = ncObj[var][t, :].data
                 if dzFile != None: ## change datum
@@ -488,7 +492,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
         elif conType == 'polygon':
             labelCol = 'zMean'
             ## time loop
-            for t in tqdm(range(ncObj['time'].shape[0])):
+            for t in tqdm(timesteps):
                 ## data to 1D non masked array
                 aux = ncObj[var][t, :].data
                 if dzFile != None: ## change datum
@@ -747,7 +751,7 @@ def nc2xr(ncFile, var):
     return ds
     
 def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitIn='m', epsgIn=4326,
-           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20):
+           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20, timesteps=None):
     ''' Run all necesary functions to export adcirc outputs as shapefiles.
         Parameters
             ncFile: string
@@ -781,6 +785,8 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
                 this value won't be changed.
+            timesteps: numpy array. Default None
+                timesteps to extract if the ncObj is a time-varying ADCIRC output file. If None, all time steps are exported
         Returns
             gdf: GeoDataFrame
                 gdf with contours
@@ -796,12 +802,16 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         levels = [l / 3.2808399 for l in levels]
     elif vUnitIn == 'ft' and vUnitOut == 'm':
         levels = [l * 3.2808399 for l in levels]
-    if conType == 'polygon':   
+    if conType == 'polygon':
         maxmax = np.max(nc[var][:].data)
         orgMaxLevel = levels[1]
+        
+        if maxmax < orgMaxLevel:
+            maxmax = orgMaxLevel
+        
         stepLevel = levels[2]
         ## list of levels to array
-        levels_aux = np.arange(levels[0], np.ceil(maxmax), stepLevel)
+        levels_aux = np.arange(levels[0], np.ceil(maxmax) + 2*stepLevel, stepLevel)
         ## given levels will now match the avarege value of each interval    
         levels_aux = levels_aux - stepLevel/2
         levels = levels_aux.copy()
@@ -812,7 +822,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     
     t00 = time.time()
     gdf = runExtractContours(nc, var, levels, conType, epsgIn, stepLevel, orgMaxLevel, 
-                            dzFile, zeroDif)
+                            dzFile, zeroDif, timesteps)
     print(f'    Ready with the contours extraction: {(time.time() - t00)/60:0.3f} min')
     
     ## clip contours if requested
@@ -927,6 +937,21 @@ def fort14togdf(filein, epsgIn, epsgOut):
         gdf['elemArea'] = [np.round(geom.area, 3) for geom in gdf.geometry]
     
     return gdf
+    
+def getDates(ncFile):
+    ''' Function to get dates of ADCIRC output file
+        Parameters
+            ncFile: string
+                full path of the ADCIRC output file
+        Returns
+            dfDates: pandas dataframe
+                df with file dates
+    '''
+    ncObj = netcdf.Dataset(ncFile, 'r')
+    t0 = pd.to_datetime(ncObj['time'].units.split('since ')[1])
+    dates = [t0 + pd.Timedelta(seconds = x) for x in ncObj['time'][:]]
+    dfDates = pd.DataFrame({'dates': dates})
+    return dfDates
 
 ####################################### GOOGLE EARTH ################################################
 
