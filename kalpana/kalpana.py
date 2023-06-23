@@ -188,10 +188,16 @@ def main(args):
         pathOut = '/data/'+modelRunID+'/kalpana/maxele.shp'
         ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         conLevels = [float(i) for i in args.conLevels.split(',')]
-
-        # Get ADCIRC filename variables
+# Get ADCIRC filename variables
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
+    
+        if grid == 'NCSC_SAB_v1.23': 
+            meshFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC123.tif'
+            dzFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
+        elif grid  == 'hsofs':
+            meshFile = '/data/kalpana/north_carolina/inputs/'+grid+'/HSOFS.tif'
+            dzFile = '/data/kalpana/north_carolina/inputs/'+grid+'/HSOFS_msl2navd88.pkl'
 
         epsgIn = 4326
         epsgOut = 6543
@@ -199,7 +205,6 @@ def main(args):
         pathRasFiles = '/data/kalpana/north_carolina/inputs/'+grid+'/'
         rasterFiles = 'ncDEMs_epsg6543'
         conLevelsLog = "-".join(map(str, conLevels))
-        meshFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC123.tif'
         vUnitIn = 'm'
         vUnitOut = 'm'
         adcircVar = 'zeta_max'
@@ -207,7 +212,6 @@ def main(args):
         subDomain = '/data/kalpana/north_carolina/inputs/'+grid+'/ncDEMs_epsg6543'
         epsgSubDom = 6543
         exportMesh = False
-        dzFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
         zeroDif = -20.0
         nameGrassLocation = 'grassLoc'
         createGrassLocation = True 
@@ -221,8 +225,8 @@ def main(args):
         ras2vec = False
         exportOrg = False
 
-        if grid == 'NCSC_SAB_v1.23':
-            logger.info('ncFile '+ncFile+' does use the NCSC_SAB_v1.23 grid, so begin processing')
+        if grid == 'NCSC_SAB_v1.23' or grid == 'hsofs':
+            logger.info('ncFile '+ncFile+' does use the '+grid+' grid, so begin processing')
 
             # Create outputs directory for second process shape, and tiff files
             outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
@@ -253,7 +257,7 @@ def main(args):
                     logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
                     sys.exit(1)
         else:
-            logger.info('ncFile '+ncFile+' does not use the NCSC_SAB_v1.22 grid, it uses the '+grid+' grid, so do not process')
+            logger.info('ncFile '+ncFile+' does not use the NCSC_SAB_v1.22 grid or the hsofs grid, it uses the '+grid+' grid, so do not process')
 
     elif args.runScript == 'runStatic':
         # variables not specific the runStatic

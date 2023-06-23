@@ -22,12 +22,6 @@ from subprocess import Popen, PIPE, STDOUT
     EXPLAIN WORKFLOW
 '''
 
-def call_proc(cmd):
-    # This runs in a separate thread
-    p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-    stdout, stderr = p.communicate()
-    return (stdout, stderr)
-
 def delFiles(listFiles, typeFiles, pkg):
     ''' Delete files form a grass location
         Parameters
@@ -733,6 +727,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     
     if rasterFiles == 'all':
         rasterFiles = os.listdir(pathRasFiles)
+
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
@@ -740,7 +735,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     t2 = time.time()
     logger.info(f'    Setup grass environment: {(t2 - t11)/60:0.2f} min') # Changed
     
-     ## setup growing
+    ## setup growing
     logger.info(f'    Start Downscaling preprocess') # Changed
     ## here the thres must be in square meters
     setupGrowing(pathOut, attrCol, exportMesh, meshFile, thres, gs, epsgOut, exportOrg)
@@ -781,7 +776,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
             pathRasters: str
                 path of the raster files
             rasterFiles: list or str
-                name(s) of the raster file(s).
+                name(s) of the raster file(s). If 'all' is input, all files in pathRasters are used
             subDomain: str or list. Default None
                 complete path of the subdomain polygon kml or shapelfile, or list with the
                 uper-left x, upper-left y, lower-right x and lower-right y coordinates. The crs must be the same of the
@@ -827,6 +822,10 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
 
     logger.info(f'    Start Setup grass environment') # Changed
     t11 = time.time()
+
+    if rasterFiles == 'all':
+        rasterFiles = os.listdir(pathRasFiles)
+
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
@@ -874,22 +873,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
         logger.info('Reproject '+bname+' to EPSG 4326') # Changed
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif')) # Changed
-        program_list = [] # Changed
-        logger.info('Create program_list to run gdal_translate, and convert TIFF to COG')
-        program_list.append(['gdal_translate',os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif'),os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'),'-of','COG','-co','COMPRESS=LZW']) # Changed
-         
-        # Apply cmds_list to pool, and output to resutls
-        for program in program_list: 
-            logger.info('Run '+" ".join(program))
-            logger.info('Convert '+os.path.join(pathout, bname + f'_epsg{epsgOut}.tmp.tif')+' to COG with filename '+os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
-            try:
-                output = subprocess.run(program, shell=False, check=True)
-            except Exception as e:
-                logger.info(e)
-                sys.exit(0)
-            logger.info('Ran '+" ".join(program)+" with output returncode "+str(output.returncode))
-
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
         logger.info('Wrote '+bname+' to COG') # Changed
     ## change resolution
     else:
