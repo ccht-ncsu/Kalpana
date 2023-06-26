@@ -188,7 +188,8 @@ def main(args):
         pathOut = '/data/'+modelRunID+'/kalpana/maxele.shp'
         ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         conLevels = [float(i) for i in args.conLevels.split(',')]
-# Get ADCIRC filename variables
+
+        # Get ADCIRC filename variables
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
     
@@ -253,6 +254,8 @@ def main(args):
                 try:
                     shutil.move(finalPathFile, finalDir)
                     logger.info('Moved cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
+                    shutil.rmtree('/data/'+modelRunID+'/kalpana')
+                    logger.info('Removed TIFF file /data/'+modelRunID+'/kalpana.') 
                 except OSError as err:
                     logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
                     sys.exit(1)
