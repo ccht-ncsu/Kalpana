@@ -235,10 +235,16 @@ def main(args):
             if not os.path.exists(outputDir):
                 mode = 0o777
                 os.makedirs(outputDir, mode, exist_ok=True)
-                os.makedirs(finalDir, mode, exist_ok=True)
-                logger.info('Made directories '+outputDir+ ' and '+finalDir+'.')
+                logger.info('Made directory '+outputDir)
             else:
-                logger.info('Directories '+outputDir+' and '+finalDir+' already made.')
+                logger.info('Directory '+outputDir+' already made.')
+
+            if not os.path.exists(finalDir):
+                mode = 0o777
+                os.makedirs(finalDir, mode, exist_ok=True)
+                logger.info('Made directory '+finalDir)
+            else:
+                logger.info('Directory '+finalDir+' already made.')
 
             # log start of runStatic run
             logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
@@ -250,15 +256,16 @@ def main(args):
                  compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
 
             # move cog tiff to final directory
-            for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
-                try:
-                    shutil.move(finalPathFile, finalDir)
-                    logger.info('Moved cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
-                    shutil.rmtree('/data/'+modelRunID+'/kalpana')
-                    logger.info('Removed TIFF file /data/'+modelRunID+'/kalpana.') 
-                except OSError as err:
-                    logger.error('Failed to move cog file '+finalPathFile.split("/")[-1]+' to '+finalDir+' directory.')
-                    sys.exit(1)
+            finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+            logger.info('The length of the finalPathFile is: '+str(len(finalPathFile)))
+            try:
+                shutil.move(finalPathFile, finalDir)
+                logger.info('Moved cog file '+finalPathFile+' to '+finalDir+' directory.')
+                shutil.rmtree('/data/'+modelRunID+'/kalpana', ignore_errors=True)
+                logger.info('Removed TIFF file /data/'+modelRunID+'/kalpana.') 
+            except OSError as err:
+                logger.error(err)
+                sys.exit(1)
         else:
             logger.info('ncFile '+ncFile+' does not use the NCSC_SAB_v1.22 grid or the hsofs grid, it uses the '+grid+' grid, so do not process')
 
@@ -374,13 +381,13 @@ def main(args):
 
         # create cog 
         # move cog tiff to final directory
-        for finalPathFile in glob.glob(outputDir+'*_epsg4326.tif'):
-            try:
-                shutil.move(finalPathFiles, finalDir)
-                logger.info('Created cog file '+finalPathFiles.split("/")[-1]+' and move to '+finalDir+' directory.')
-            except OSError as err:
-                logger.error('Failed to create cog file '+finalPathFiles.split("/")[-1]+' and move to '+finalDir+' directory.')
-                sys.exit(1)
+        finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+        try:
+            shutil.move(finalPathFile, finalDir)
+            logger.info('Created cog file '+finalPathFile+' and move to '+finalDir+' directory.')
+        except OSError as err:
+            logger.error(err)
+            sys.exit(1)
 
 if __name__ == "__main__":
     ''' Takes argparse inputs and passes theme to the main function
