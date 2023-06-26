@@ -755,7 +755,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     print(f'Output files saved on: {pathaux}')
     
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
-                      nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster'):
+                      nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=False):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
         Parameters
             fort14: str
@@ -782,7 +782,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
              createLocMethod: str. DEFAULT 'from_raster'
                  Two options "from_epsg" (default) or "from_raster" otherwise an error will be thrown.
         Returns
-            NOne
+            None
     '''
     ## create gdf from fort14 file with elements as geometries
     t0 = time.time()
@@ -822,6 +822,9 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
+    if exportDEM == True:
+        gs.run_command('r.out.gdal', input = 'dem', flags = 'cm', format = 'GTiff', nodata = -9999, 
+               output = os.path.join(os.path.dirname(pathOut), 'downscaling_dem.tif'))
     ## get minimum area
     minArea = gdfMesh.elemArea.min()
     t0 = time.time()
@@ -893,3 +896,47 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
                 rasOut = rasIn.rio.reproject(epsgOut, shape = (newHeight, newWidth),
                                             resampling = Resampling.bilinear)
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+            
+def mergeDEMs(grassVer, pathRasFiles, rasterFiles, pathOut, epsgOut,
+              nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster'):
+    ''' Function to rasterize mesh shapefile created from the fort.14 file
+        Parameters
+            grassVer: float
+                Version of the grass software (The code was writen for v8.0).
+            pathRasters: str
+                path of the raster files
+            rasterFiles: list or str
+                name(s) of the raster file(s). If 'all' is input, all files in pathRasters are used
+            pathOut: str
+                full path of the output DEM
+            nameGrassLocation: str. DEFAULT None
+                path and name of the grass location. If None the grass location will be called 'grassLoc' and save in the 
+                same path of the extracted shape file (pathout).
+            createGrassLocation: boolean. DEFAULT True
+                True for creating a new location and loading DEMs, false to use an existing location with DEMs already imported
+             createLocMethod: str. DEFAULT 'from_raster'
+                 Two options "from_epsg" (default) or "from_raster" otherwipathOut, epsgOut,se an error will be thrown.
+        Returns
+            None
+    '''
+    pathaux = os.path.dirname(pathOut)
+    ## add grass to the environment variables
+    grassEnvVar(grassVer)
+    ## import grass
+    import grass.script as gs
+    import grass.script.setup as gsetup
+    ## grass location path
+    if nameGrassLocation == None:
+        pathGrassLocation = os.path.join(pathaux, 'grassLoc')
+    else:
+        pathGrassLocation = os.path.join(pathaux, nameGrassLocation)
+
+    if rasterFiles == 'all':
+        rasterFiles = os.listdir(pathRasFiles)
+        
+    ## setup grass env
+    setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
+                pathRasFiles, rasterFiles, createLocMethod, epsgOut)
+        
+    gs.run_command('r.out.gdal', input = 'dem', flags = 'cm', format = 'GTiff', nodata = -9999, 
+           output = pathOut)
