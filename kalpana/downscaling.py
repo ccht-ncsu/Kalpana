@@ -755,7 +755,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     print(f'Output files saved on: {pathaux}')
     
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
-                      nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=False):
+                      nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=True):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
         Parameters
             fort14: str
