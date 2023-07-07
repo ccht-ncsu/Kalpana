@@ -257,9 +257,10 @@ def main(args):
 
             # move cog tiff to final directory
             finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+            finalFile = finalPathFile.split('/')[-1]
             logger.info('The length of the finalPathFile is: '+str(len(finalPathFile)))
             try:
-                shutil.move(finalPathFile, finalDir)
+                shutil.move(finalPathFile, os.path.join(finalDir, finalFile))
                 logger.info('Moved cog file '+finalPathFile+' to '+finalDir+' directory.')
                 shutil.rmtree('/data/'+modelRunID+'/kalpana', ignore_errors=True)
                 logger.info('Removed TIFF file /data/'+modelRunID+'/kalpana.') 
@@ -385,7 +386,7 @@ def main(args):
         finalFile = finalPathFile.split('/')[-1]
 
         try:
-            shutil.move(finalPathFile, finalDir+finalFile)
+            shutil.move(finalPathFile, os.path.join(finalDir, finalFile))
             logger.info('Created cog file '+finalPathFile+' and move to '+finalDir+' directory.')
         except OSError as err:
             logger.error(err)
