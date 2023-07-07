@@ -382,8 +382,10 @@ def main(args):
         # create cog 
         # move cog tiff to final directory
         finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+        finalFile = finalPathFile.split('/')[-1]
+
         try:
-            shutil.move(finalPathFile, finalDir)
+            shutil.move(finalPathFile, finalDir+finalFile)
             logger.info('Created cog file '+finalPathFile+' and move to '+finalDir+' directory.')
         except OSError as err:
             logger.error(err)
