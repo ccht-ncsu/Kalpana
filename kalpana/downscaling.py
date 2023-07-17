@@ -846,7 +846,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
                     output = os.path.splitext(pathOut)[0] + '.tif')
     print(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min')
     
-def reprojectRas(filein, pathout, epsgOut=None, res='same'):
+def reprojectRas2(filein, pathout, epsgOut=None, res='same'):
     ''' Reproject and change resolution of rasters
         Parameters
             filein: str
@@ -868,34 +868,29 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ## reproject if raster is in wgs84 (lat/lon)
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
+        # rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
+    
     ## change resolution
     else:
-        scaleFactor = rasIn.rio.resolution()[0] / res
-        newWidth = int(rasIn.rio.width * scaleFactor)
-        newHeight = int(rasIn.rio.height * scaleFactor)
-        
         ## same crs
         if epsgOut == None:
+            scaleFactor = rasIn.rio.resolution()[0] / res
+            newWidth = int(rasIn.rio.width * scaleFactor)
+            newHeight = int(rasIn.rio.height * scaleFactor)
+            
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'))
-        
-        ## change crs
+            # rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'))
+
         else:
-            ## if raster in epsg 4326 reprojection and change of res
-            ## doesn't work. First reprojection and then change of res
-            if rasIn.rio.crs.to_string() == 'EPSG:4326':
-                rasOut = rasIn.rio.reproject(epsgOut)
-                scaleFactor = rasOut.rio.resolution()[0] / res
-                newWidth = int(rasOut.rio.width * scaleFactor)
-                newHeight = int(rasOut.rio.height * scaleFactor)
-                rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
-                                            resampling = Resampling.bilinear)                
-            else:
-                rasOut = rasIn.rio.reproject(epsgOut, shape = (newHeight, newWidth),
-                                            resampling = Resampling.bilinear)
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+            rasOut = rasIn.rio.reproject(epsgOut)
+            scaleFactor = rasOut.rio.resolution()[0] / res
+            newWidth = int(rasOut.rio.width * scaleFactor)
+            newHeight = int(rasOut.rio.height * scaleFactor)
+            rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
+                                resampling = Resampling.bilinear)
+            # rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+    return rasOut
             
 def mergeDEMs(grassVer, pathRasFiles, rasterFiles, pathOut, epsgOut,
               nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster'):
