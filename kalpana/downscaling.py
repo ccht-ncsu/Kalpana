@@ -846,7 +846,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
                     output = os.path.splitext(pathOut)[0] + '.tif')
     print(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min')
     
-def reprojectRas2(filein, pathout, epsgOut=None, res='same'):
+def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ''' Reproject and change resolution of rasters
         Parameters
             filein: str
@@ -859,8 +859,8 @@ def reprojectRas2(filein, pathout, epsgOut=None, res='same'):
             res: int or float. Default None
                 desired resolution
         Returns
-            aux: int
-                1 if the raster file was reproject, 0 otherwise
+            rasOut: rioxarray raster object
+                updated raster
     '''
     ## open raster
     rasIn = rxr.open_rasterio(filein)
@@ -868,7 +868,7 @@ def reprojectRas2(filein, pathout, epsgOut=None, res='same'):
     ## reproject if raster is in wgs84 (lat/lon)
     if res == 'same':
         rasOut = rasIn.rio.reproject(epsgOut)
-        # rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'))
     
     ## change resolution
     else:
@@ -880,7 +880,7 @@ def reprojectRas2(filein, pathout, epsgOut=None, res='same'):
             
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
-            # rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'))
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'))
 
         else:
             rasOut = rasIn.rio.reproject(epsgOut)
@@ -889,7 +889,7 @@ def reprojectRas2(filein, pathout, epsgOut=None, res='same'):
             newHeight = int(rasOut.rio.height * scaleFactor)
             rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
                                 resampling = Resampling.bilinear)
-            # rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
     return rasOut
             
 def mergeDEMs(grassVer, pathRasFiles, rasterFiles, pathOut, epsgOut,
