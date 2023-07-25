@@ -762,7 +762,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     logger.info(f'Output files saved on: {pathaux}') # Changed
     
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
-                      nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=False):
+                      nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=True):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
         Parameters
             fort14: str
@@ -866,8 +866,8 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             res: int or float. Default None
                 desired resolution
         Returns
-            aux: int
-                1 if the raster file was reproject, 0 otherwise
+            rasOut: rioxarray raster object
+                updated raster
     '''
     ## open raster
     rasIn = rxr.open_rasterio(filein)
@@ -878,14 +878,15 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
         logger.info('Reproject '+bname+' to EPSG 4326') # Changed
         rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
         logger.info('Wrote '+bname+' to COG') # Changed
+
     ## change resolution
     else:
-        scaleFactor = rasIn.rio.resolution()[0] / res
-        newWidth = int(rasIn.rio.width * scaleFactor)
-        newHeight = int(rasIn.rio.height * scaleFactor)
-        
         ## same crs
         if epsgOut == None:
+            scaleFactor = rasIn.rio.resolution()[0] / res
+            newWidth = int(rasIn.rio.width * scaleFactor)
+            newHeight = int(rasIn.rio.height * scaleFactor)
+
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
             logger.info('Write '+bname+' to COG') # Changed
@@ -894,18 +895,12 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
         
         ## change crs
         else:
-            ## if raster in epsg 4326 reprojection and change of res
-            ## doesn't work. First reprojection and then change of res
-            if rasIn.rio.crs.to_string() == 'EPSG:4326':
-                rasOut = rasIn.rio.reproject(epsgOut)
-                scaleFactor = rasOut.rio.resolution()[0] / res
-                newWidth = int(rasOut.rio.width * scaleFactor)
-                newHeight = int(rasOut.rio.height * scaleFactor)
-                rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
+            rasOut = rasIn.rio.reproject(epsgOut)
+            scaleFactor = rasOut.rio.resolution()[0] / res
+            newWidth = int(rasOut.rio.width * scaleFactor)
+            newHeight = int(rasOut.rio.height * scaleFactor)
+            rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
                                             resampling = Resampling.bilinear)                
-            else:
-                rasOut = rasIn.rio.reproject(epsgOut, shape = (newHeight, newWidth),
-                                            resampling = Resampling.bilinear)
             logger.info('Write '+bname+' to COG') # Changed
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'), driver="COG") # Changed
             logger.info('Wrote '+bname+' to COG') # Changed
