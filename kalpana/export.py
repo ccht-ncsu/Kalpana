@@ -310,8 +310,8 @@ def filledContours2gpd(tri, data, levels, epsg, step, orgMax, pbar=False):
     else:
         #with TqdmCallback(desc = "Compute contours using Dask"): # Changed
         logger.info('Begin computing contours using Dask') # Changed
-        daskGeoms = dask.compute(tasks, scheduler = 'threads')
-        logger.info('Begin computing contours using Dask') # Changed
+        daskGeoms = dask.compute(tasks, scheduler = 'threads') # Changed
+        logger.info('Finnished computing contours using Dask') # Changed
     ## dask output to list
     geoms = list(itertools.chain(*daskGeoms[0]))
     
@@ -371,7 +371,7 @@ def contours2gpd(tri, data, levels, epsg, pbar=False):
     else:
         #with TqdmCallback(desc = "Compute contours using Dask"): # Changed
         logger.info('Begin computing contours using Dask') # Changed
-        daskGeoms = dask.compute(tasks, scheduler = 'threads')
+        daskGeoms = dask.compute(tasks, scheduler = 'threads') # Changed
         logger.info('Finish computing contours using Dask') # Changed
 
     geoms = list(itertools.chain(*daskGeoms[0]))
@@ -468,7 +468,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
     ## time varying
     else:
         ## get epoch
-        if timesteps is None: 
+        if timesteps is None:
             timesteps = range(ncObj['time'].shape[0])
         t0 = pd.to_datetime(ncObj['time'].units.split('since ')[1])
         listGdf = []
@@ -806,13 +806,13 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         levels = [l / 3.2808399 for l in levels]
     elif vUnitIn == 'ft' and vUnitOut == 'm':
         levels = [l * 3.2808399 for l in levels]
-    if conType == 'polygon':   
+    if conType == 'polygon':
         maxmax = np.max(nc[var][:].data)
         orgMaxLevel = levels[1]
 
         if maxmax < orgMaxLevel:
             maxmax = orgMaxLevel
-
+ 
         stepLevel = levels[2]
         ## list of levels to array
         levels_aux = np.arange(levels[0], np.ceil(maxmax) + 2*stepLevel, stepLevel)
@@ -828,13 +828,14 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     gdf = runExtractContours(nc, var, levels, conType, epsgIn, stepLevel, orgMaxLevel, 
                             dzFile, zeroDif, timesteps)
     logger.info(f'    Ready with the contours extraction: {(time.time() - t00)/60:0.3f} min') # Changed
-    
+ 
     ## clip contours if requested
     if subDomain is not None:
         t0 = time.time()
         subDom = readSubDomain(subDomain, epsgSubDom)
         gdf = gpd.clip(gdf, subDom.to_crs(epsgIn))
         logger.info(f'    Cliping contours based on mask: {(time.time() - t0)/60:0.3f} min') # Changed
+ 
     ## change vertical units if requested
     if vUnitIn == vUnitOut:
         pass
@@ -858,6 +859,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     elif pathOut.endswith('.wkt'):
         gdf.to_csv(pathOut)
     logger.info(f'    Saving file: {(time.time() - t0)/60:0.3f} min') # Changed
+ 
     ## export mesh if requested
     if exportMesh == True:
         logger.info('    Exporting mesh') # Changed
@@ -875,9 +877,8 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     else:
         logger.info(f'Ready with exporting code after: {(time.time() - t00)/60:0.3f} min') # Changed
         return gdf
-
-# Changed, added fileintype so that fort.14 info can be obtained from a max netcdf file 
-def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
+    
+def fort14togdf(filein, epsgIn, epsgOut):
     ''' Write adcirc mesh from fort.14 file as GeoDataFrame and extract centroid of each element. 
         Used in the downscaling process
         Parameters:
@@ -887,32 +888,22 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
                 coordinate system of the adcirc input
             epsgOut: int
                 coordinate system of the output shapefile
-            fileInType: str
-                input file type, which are netcdf (default) or fort.14
         Returns
             gdf: GeoDataFrame
                 GeoDataFrame with polygons as geometry and more info such as: area, representative
                 element size, centroids coordinates, and vertices
     '''
-    if fileintype == 'fort.14':
-        ## read only the two first lines of the file to get the number of elements and nodes
-        with open(filein) as fin:
-            head = list(islice(fin, 2))
-            data = [int(x) for x in head[1].split()]
-        ## read nodes
-        nodes = np.loadtxt(filein, skiprows = 2, max_rows = data[1], usecols = (1, 2, 3))
-        ## read elements
-        elem = np.loadtxt(filein, skiprows = 2 + data[1], max_rows = data[0], usecols = (2, 3, 4)) - 1
-        x = nodes[:, 0]
-        y = nodes[:, 1]
-        z = nodes[:, 2]
-    elif fileintype == 'netcdf':
-        with netcdf.Dataset(filein) as nc:
-            x = nc['x'][:].data
-            y = nc['y'][:].data
-            z = nc['depth'][:].data
-            elem = nc['element'][:].data - 1
- 
+    ## read only the two first lines of the file to get the number of elements and nodes
+    with open(filein) as fin:
+        head = list(islice(fin, 2))
+        data = [int(x) for x in head[1].split()]
+    ## read nodes
+    nodes = np.loadtxt(filein, skiprows = 2, max_rows = data[1], usecols = (1, 2, 3))
+    ## read elements
+    elem = np.loadtxt(filein, skiprows = 2 + data[1], max_rows = data[0], usecols = (2, 3, 4)) - 1
+    x = nodes[:, 0]
+    y = nodes[:, 1]
+    z = nodes[:, 2]
     ## matplotlib triangulation
     tri = mpl.tri.Triangulation(x, y, elem)
     ## select the coordinate of each vertex
@@ -929,7 +920,7 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
         pass
     else:
         gdf = gdf.to_crs(epsgOut)
-    
+ 
     ## get centroids and vertices coordinatess
     gdf['zmean'] = -1*zvertices.mean(axis = 1)
     gdf['centX'] = xvertices.mean(axis = 1)
@@ -938,7 +929,7 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
     gdf['v2'] = elem[:, 1]
     gdf['v3'] = elem[:, 2]
     gdf['id'] = range(len(gdf))
- 
+
     ## compute area and presentative length if the output crs is not lat/lon
     if epsgOut == 4326:
         pass
@@ -946,18 +937,18 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
         gdf['repLen'] = [np.round(geom.length/3, 3) for geom in gdf.geometry]
         gdf['minLen'] = [np.min([distance.euclidean(pi, pj) for pi, pj in zip(geom.boundary.coords[:-1], geom.boundary.coords[1:])]) for geom in gdf.geometry]
         gdf['elemArea'] = [np.round(geom.area, 3) for geom in gdf.geometry]
-    
-    return gdf
 
+    return gdf
+ 
 def getDates(ncFile):
     ''' Function to get dates of ADCIRC output file
-        Parameters 
+        Parameters
             ncFile: string
                 full path of the ADCIRC output file
         Returns
             dfDates: pandas dataframe
                 df with file dates
-    ''' 
+    '''
     ncObj = netcdf.Dataset(ncFile, 'r')
     t0 = pd.to_datetime(ncObj['time'].units.split('since ')[1])
     dates = [t0 + pd.Timedelta(seconds = x) for x in ncObj['time'][:]]

@@ -4,14 +4,13 @@ import subprocess
 import sys
 import time
 import dask
-#from tqdm.dask import TqdmCallback # Changed 
+#from tqdm.dask import TqdmCallback # Changed
 import geopandas as gpd
 import rioxarray as rxr
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from export import nc2shp, mesh2gdf, fort14togdf, readSubDomain # Changed
-from loguru import logger # Changed 
-from subprocess import Popen, PIPE, STDOUT
+from loguru import logger # Changed
 
 '''
     All functions using GRASS GRIS has an argument 'pkg' which is the grass package.
@@ -53,7 +52,7 @@ def rastersToList(pathRasters, rasterFiles):
         rasterFiles = [rasterFiles]
     # else:
         # logger.info("Warning: if DEM raster resolutions do not match, the aggregate DEM " \ # Changed
-                # "resolution will match the resolution of the first input raster.") 
+                # "resolution will match the resolution of the first input raster.")
     rasterFiles = [os.path.join(pathRasters, r) for r in rasterFiles]
     return rasterFiles
 
@@ -244,7 +243,7 @@ def importRasters_parallel(rasFiles, pkg, myepsg):
         tasks = [importRastersParallel(r, pkg, myepsg) for r in rasFiles[1:]]
         #with TqdmCallback(desc = "Importing DEMs"): # Changed
         logger.info('Begin importing DEMs') # Changed # Changed
-        rasterOutList2 = dask.compute(tasks, scheduler = 'processes')
+        rasterOutList2 = dask.compute(tasks, scheduler = 'processes') # Changed
         logger.info('Finish importing DEMs') # Changed # Changed
         rasterOutList = rasterOutList + rasterOutList2[0]
                 
@@ -385,16 +384,16 @@ def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, 
                     quiet = True, snap = 0.000001, min_area = 10,
                     flags = 'o', stdout=subprocess.PIPE, stderr=subprocess.PIPE) # Changed
     logger.info(f'        Import kalpana shapefile: {(time.time() - t0)/60:0.2f} min') # Changed
-    
+
     t0 = time.time()
     pkg.run_command('v.to.rast', input = os.path.basename(kalpanaShp[:-4]), 
                     type = 'area', output = 'kalpanaRast', use = 'attr', 
                     quiet = True, attribute_column = attrCol, overwrite = True)
     logger.info(f'        Kalpana shape to raster: {(time.time() - t0)/60:0.2f} min') # Changed
-    
+ 
     if exportOrg == True: #export adcirc output without growing as tif
         pkg.run_command('r.out.gdal', input = 'kalpanaRast', flags = 'cm', format = 'GTiff', 
-                        nodata = -9999, output = f'{kalpanaShp[:-4]}.tif', overwrite = True, 
+                        nodata = -9999, output = f'{kalpanaShp[:-4]}.tif', overwrite = True,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE) # Changed
     
     if mesh2ras == True: #exportMesh is True so meshFile is a shapefile
@@ -403,7 +402,7 @@ def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, 
         pkg.run_command('v.in.ogr', input = meshFile, overwrite = True,
                         quiet = True, min_area = int(minArea/100)*100, flags = 'o', snap = 0.1)
         logger.info(f'        Import mesh shapefile: {(time.time() - t0)/60:0.2f} min') # Changed
-        
+ 
         t0 = time.time()
         pkg.run_command('v.to.rast', input = os.path.splitext(os.path.basename(meshFile))[0], 
                         type = 'area', use = 'attr', quiet = True, 
@@ -415,7 +414,7 @@ def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, 
                         flags = 'cm', format = 'GTiff', nodata = -9999, overwrite = True,
                         output = os.path.splitext(meshFile)[0] + '.tif', stdout=subprocess.PIPE, stderr=subprocess.PIPE) # Changed
         logger.info(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min') # Changed
-        
+ 
     else: # raster mesh already exists
         ## try to find file in the grass location
         ## get only name of the meshFile without extension
@@ -532,11 +531,10 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
         pkg.run_command('g.rename', raster = ('grownKalpanaRast0', 'grownKalpanaRast1'), 
                       overwrite = True, quiet = True)
         logger.info(f'        Rename: {(time.time() - ta)/60:0.3f}') # Changed
-                      
+ 
     ta = time.time()
     clumping('grownKalpanaRast1', 'kalpanaRast', 'grownKalpanaRastLevel', clumpThreshold, pkg)
     logger.info(f'        Delete unconnected clumps: {(time.time() - ta)/60:0.3f}') # Changed
-    
     
     pathOut = os.path.dirname(kalpanaShp)
     fileOut = os.path.basename(kalpanaShp)[:-4]# remove extension
@@ -545,46 +543,46 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
     # export raster as tif
     pkg.run_command('r.out.gdal', input = 'grownKalpanaRastLevel', flags = 'mc', format = 'GTiff', nodata = -9999, 
                    output = os.path.join(pathOut, f'{fileOut}_level_downscaled.tif'), 
-                   overwrite = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                   overwrite = True)
     logger.info(f'        export as tif level: {(time.time() - ta)/60:0.3f}') # Changed
-    
+ 
     if ras2vec == True:
         ta = time.time()
         #Export to ESRI shapefile
         pkg.run_command('r.to.vect', input = 'grownKalpanaRastLevel', output = 'grownKalpanaVectLevel', type = 'area')
         logger.info(f'        ras to vector: {(time.time() - ta)/60:0.3f}') # Changed
-        
+ 
         ta = time.time()
         pkg.run_command('v.out.ogr', input = 'grownKalpanaVectLevel', 
                           output = os.path.join(pathOut, f'{fileOut}_level_downscaled'), 
                           type = 'area', format = 'ESRI_Shapefile', flags = 'se', quiet = True, overwrite = True)
         logger.info(f'        export as shp level: {(time.time() - ta)/60:0.3f}') # Changed
-    
+ 
     if floodDepth == True: ## export water depth in flooded cells
         ta = time.time()
         pkg.mapcalc("$output = if(!isnull($dem) && !isnull($grown), $grown - $dem, null())", grown = 'grownKalpanaRastLevel', 
                     dem = 'dem', output = 'grownKalpanaRastDepth', quiet = True, overwrite = True)
         logger.info(f'        compute water depth: {(time.time() - ta)/60:0.3f}') # Changed
-        
+ 
         ta = time.time()
         # export raster as tif
         pkg.run_command('r.out.gdal', input = 'grownKalpanaRastDepth', flags = 'cm', format = 'GTiff', nodata = -9999, 
                        output = os.path.join(pathOut, f'{fileOut}_depth_downscaled.tif'), 
-                       overwrite = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                       overwrite = True)
         logger.info(f'        export as tif depth: {(time.time() - ta)/60:0.3f}') # Changed
-        
+ 
         ta = time.time()
         if ras2vec == True:
             #Export to ESRI shapefile
             pkg.run_command('r.to.vect', input = 'grownKalpanaRastDepth', output = 'grownKalpanaVectDepth', type = 'area')
             logger.info(f'        ras to shp depth: {(time.time() - ta)/60:0.3f}') # Changed
-            
+ 
             ta = time.time()
             pkg.run_command('v.out.ogr', input = 'grownKalpanaVectDepth', 
                             output = os.path.join(pathOut, f'{fileOut}_depth_downscaled'), 
                             type = 'area', format = 'ESRI_Shapefile', flags = 'se', quiet = True, overwrite = True)
             logger.info(f'        export as shp depth: {(time.time() - ta)/60:0.3f}') # Changed
-        
+ 
 def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
               epsgIn=4326, vUnitIn='m', vUnitOut='ft', var='zeta_max', conType ='polygon', 
               subDomain=None, epsgSubDom=None, exportMesh=False, dzFile=None, zeroDif=-20, 
@@ -721,46 +719,45 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
         pathGrassLocation = os.path.join(pathaux, 'grassLoc')
     else:
         pathGrassLocation = os.path.join(pathaux, nameGrassLocation)
-    
+
     logger.info(f'    Start Setup grass environment') # Changed
     t11 = time.time()
     
     if rasterFiles == 'all':
         rasterFiles = os.listdir(pathRasFiles)
-
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
     
     t2 = time.time()
     logger.info(f'    Setup grass environment: {(t2 - t11)/60:0.2f} min') # Changed
-    
+ 
     ## setup growing
     logger.info(f'    Start Downscaling preprocess') # Changed
     ## here the thres must be in square meters
     setupGrowing(pathOut, attrCol, exportMesh, meshFile, thres, gs, epsgOut, exportOrg)
     t3 = time.time()
     logger.info(f'    Downscaling preprocess: {(t3 - t2)/60:0.3f} min') # Changed
-    
+ 
     ## grow
     logger.info(f'    Start growing') # Changed
     staticGrow(repLenGrowing, gs, os.path.splitext(os.path.basename(meshFile))[0])
     t4 = time.time()
     logger.info(f'    Ready with static grow: {(t4 - t3)/60:0.3f} min') # Changed
-    
-   ## postprocess
+ 
+    ## postprocess
     logger.info(f'    Start postprocessing') # Changed
     postProcessStatic(compAdcirc2dem, floodDepth, pathOut, thres, gs, ras2vec)
     t5 = time.time()
     logger.info(f'    Ready with postprocess: {(t5 - t4)/60:0.3f} min') # Changed
     logger.info(f'Ready with static downscaling: {(t5 - t1)/60:0.3f} min') # Changed
-
+ 
     if finalOutToLatLon == True:
         finalOut = os.path.join(pathaux, os.path.basename(pathOut)[:-4] + '_level_downscaled.tif') 
         reprojectRas(finalOut, pathaux, epsgOut = 4326)
     logger.info(f'Kalpana finished sucsesfully after: {(t5 - t0)/60:0.3f} min') # Changed
     logger.info(f'Output files saved on: {pathaux}') # Changed
-    
+ 
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
                       nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=True):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
@@ -802,7 +799,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
         subDom = readSubDomain(subDomain, epsgIn)
         gdfMesh = gpd.clip(gdfMesh, subDom)
         logger.info(f'Clip mesh using subfomain: {(time.time() - t0)/60:0.3f} min') # Changed
-        
+
     ## export gdf as shapefile
     t0 = time.time()
     gdfMesh.to_file(pathOut)
@@ -822,10 +819,10 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
 
     logger.info(f'    Start Setup grass environment') # Changed
     t11 = time.time()
-
+ 
     if rasterFiles == 'all':
         rasterFiles = os.listdir(pathRasFiles)
-
+ 
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
@@ -850,8 +847,8 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     t0 = time.time()
     gs.run_command('r.out.gdal', input = os.path.splitext(os.path.basename(pathOut))[0], 
                     flags = 'mc', format = 'GTiff', nodata = -9999, overwrite = True,
-                    output = os.path.splitext(pathOut)[0] + '.tif', stdout=subprocess.PIPE, stderr=subprocess.PIPE) # Changed
-    logger.info(f'        Mesh exported as raster: {(time.time() - t0)/60:0.2f} min') # Changed
+                    output = os.path.splitext(pathOut)[0] + '.tif')
+    logger.info(f'        Mesh exported to raster: {(time.time() - t0)/60:0.2f} min') # Changed
     
 def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ''' Reproject and change resolution of rasters
@@ -878,7 +875,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
         logger.info('Reproject '+bname+' to EPSG 4326') # Changed
         rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
         logger.info('Wrote '+bname+' to COG') # Changed
-
+    
     ## change resolution
     else:
         ## same crs
@@ -886,25 +883,26 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             scaleFactor = rasIn.rio.resolution()[0] / res
             newWidth = int(rasIn.rio.width * scaleFactor)
             newHeight = int(rasIn.rio.height * scaleFactor)
-
+            
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
             logger.info('Write '+bname+' to COG') # Changed
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'), driver="COG") # Changed
             logger.info('Wrote '+bname+' to COG') # Changed
-        
-        ## change crs
+
         else:
             rasOut = rasIn.rio.reproject(epsgOut)
             scaleFactor = rasOut.rio.resolution()[0] / res
             newWidth = int(rasOut.rio.width * scaleFactor)
             newHeight = int(rasOut.rio.height * scaleFactor)
             rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
-                                            resampling = Resampling.bilinear)                
+                                resampling = Resampling.bilinear)
             logger.info('Write '+bname+' to COG') # Changed
-            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'), driver="COG") # Changed
+            rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
             logger.info('Wrote '+bname+' to COG') # Changed
-
+ 
+    return rasOut
+            
 def mergeDEMs(grassVer, pathRasFiles, rasterFiles, pathOut, epsgOut,
               nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster'):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
