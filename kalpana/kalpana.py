@@ -188,10 +188,10 @@ def main(args):
 
     elif args.runScript == 'runStaticShort':
         # define runStatic input variables
-        modelRunID = args.modelRunID
-        pathOut = '/data/'+modelRunID+'/kalpana/maxele.shp'
-        ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         runLocation = args.runLocation
+        modelRunID = args.modelRunID
+        pathOut = '/data/'+modelRunID+'/kalpana/'+runLocation+'/maxele.shp'
+        ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         conLevels = [float(i) for i in args.conLevels.split(',')]
 
         # Get ADCIRC filename variables
@@ -200,11 +200,11 @@ def main(args):
     
         if runLocation == 'north_carolina':
             if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_NCSC_SAB123-002.tif' # No shapefiles
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_NCSC_SAB123-002.tif' # NCSC123.tif No shapefiles
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m-003.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m-003.tif'
+                rasterFiles = 'NC_CoNED_res10m-003.tif' #'ncDEMs_epsg6543'
+                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m-003.tif' #ncDEMs_epsg6543
             elif grid  == 'hsofs':
                 meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_HSOFS-003.tif' # No shapefiles or tiff file for hsofs
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
@@ -256,7 +256,7 @@ def main(args):
 
             # Create outputs directory for second process shape, and tiff files
             outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
-            finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
+            finalDir = "/".join(outputDir.split('/')[0:-3])+'/final/kalpana/'+runLocation+'/'
             if not os.path.exists(outputDir):
                 mode = 0o777
                 os.makedirs(outputDir, mode, exist_ok=True)
