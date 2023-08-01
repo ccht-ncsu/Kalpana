@@ -876,7 +876,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         print(f'Ready with exporting code after: {(time.time() - t00)/60:0.3f} min')
         return gdf
     
-def fort14togdf(filein, epsgIn, epsgOut):
+def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
     ''' Write adcirc mesh from fort.14 file as GeoDataFrame and extract centroid of each element. 
         Used in the downscaling process
         Parameters:
@@ -892,16 +892,23 @@ def fort14togdf(filein, epsgIn, epsgOut):
                 element size, centroids coordinates, and vertices
     '''
     ## read only the two first lines of the file to get the number of elements and nodes
-    with open(filein) as fin:
-        head = list(islice(fin, 2))
-        data = [int(x) for x in head[1].split()]
-    ## read nodes
-    nodes = np.loadtxt(filein, skiprows = 2, max_rows = data[1], usecols = (1, 2, 3))
-    ## read elements
-    elem = np.loadtxt(filein, skiprows = 2 + data[1], max_rows = data[0], usecols = (2, 3, 4)) - 1
-    x = nodes[:, 0]
-    y = nodes[:, 1]
-    z = nodes[:, 2]
+    if fileintype == 'fort.14':
+        with open(filein) as fin:
+            head = list(islice(fin, 2))
+            data = [int(x) for x in head[1].split()]
+        ## read nodes
+        nodes = np.loadtxt(filein, skiprows = 2, max_rows = data[1], usecols = (1, 2, 3))
+        ## read elements
+        elem = np.loadtxt(filein, skiprows = 2 + data[1], max_rows = data[0], usecols = (2, 3, 4)) - 1
+        x = nodes[:, 0]
+        y = nodes[:, 1]
+        z = nodes[:, 2]
+    elif fileintype == 'netcdf':
+        with netcdf.Dataset(filein) as nc:
+            x = nc['x'][:].data              
+            y = nc['y'][:].data         
+            z = nc['depth'][:].data        
+            elem = nc['element'][:].data - 1
     ## matplotlib triangulation
     tri = mpl.tri.Triangulation(x, y, elem)
     ## select the coordinate of each vertex
