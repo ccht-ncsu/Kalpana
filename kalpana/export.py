@@ -886,6 +886,8 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
                 coordinate system of the adcirc input
             epsgOut: int
                 coordinate system of the output shapefile
+            fileintype: str
+                file type used to get nodes and elements. Default netcdf
         Returns
             gdf: GeoDataFrame
                 GeoDataFrame with polygons as geometry and more info such as: area, representative
