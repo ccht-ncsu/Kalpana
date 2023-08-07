@@ -190,7 +190,7 @@ def main(args):
         # define runStatic input variables
         runLocation = args.runLocation
         modelRunID = args.modelRunID
-        pathOut = '/data/'+modelRunID+'/kalpana/'+runLocation+'/maxele.shp'
+        pathOut = '/data/'+modelRunID+'/kalpana/'+runLocation+'/maxele.tif'
         ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         conLevels = [float(i) for i in args.conLevels.split(',')]
 
@@ -219,7 +219,7 @@ def main(args):
                 rasterFiles = 'SC_CoNED_res10m-002.tif'
                 subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m-002.tif'
             elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_HSOFS-003..tif' # No shapefiles
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_HSOFS-003.tif' # No shapefiles
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
                 rasterFiles = 'SC_CoNED_res10m-002.tif'
