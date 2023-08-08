@@ -200,30 +200,30 @@ def main(args):
     
         if runLocation == 'north_carolina':
             if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_NCSC_SAB123-002.tif' # NCSC123.tif No shapefiles
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_NCSC_SAB123_002.tif' # NCSC123.tif No shapefiles
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m-003.tif' #'ncDEMs_epsg6543'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m-003.tif' #ncDEMs_epsg6543
+                rasterFiles = 'NC_CoNED_res10m_003.tif' #'ncDEMs_epsg6543'
+                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif' #ncDEMs_epsg6543
             elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_HSOFS-003.tif' # No shapefiles or tiff file for hsofs
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_HSOFS_003.tif' # No shapefiles or tiff file for hsofs
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m-003.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m-003.tif'
+                rasterFiles = 'NC_CoNED_res10m_003.tif'
+                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif'
         elif runLocation == 'south_carolina':
             if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_res10m_NCSC_SAB123-001.tif' # No shapefiles
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_res10m_NCSC_SAB123_001.tif' # No shapefiles
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'SC_CoNED_res10m-002.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m-002.tif'
+                rasterFiles = 'SC_CoNED_res10m_002.tif'
+                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m_002.tif'
             elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_HSOFS-003.tif' # No shapefiles
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_HSOFS_003.tif' # No shapefiles
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'SC_CoNED_res10m-002.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m-002.tif'
+                rasterFiles = 'SC_CoNED_res10m_002.tif'
+                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m_002.tif'
         else:
             logger.info('The runLocation '+runLocation+' is incorrect')
             sys.exit(1)
