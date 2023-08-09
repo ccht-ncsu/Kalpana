@@ -190,7 +190,7 @@ def main(args):
         # define runStatic input variables
         runLocation = args.runLocation
         modelRunID = args.modelRunID
-        pathOut = '/data/'+modelRunID+'/kalpana/'+runLocation+'/maxele.tif'
+        pathOut = '/data/'+modelRunID+'/kalpana/'+runLocation+'/maxele.shp'
         ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         conLevels = [float(i) for i in args.conLevels.split(',')]
 

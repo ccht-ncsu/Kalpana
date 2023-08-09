@@ -543,7 +543,7 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
     # export raster as tif
     pkg.run_command('r.out.gdal', input = 'grownKalpanaRastLevel', flags = 'mc', format = 'GTiff', nodata = -9999, 
                    output = os.path.join(pathOut, f'{fileOut}_level_downscaled.tif'), 
-                   overwrite = True)
+                   overwrite = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     logger.info(f'        export as tif level: {(time.time() - ta)/60:0.3f}') # Changed
  
     if ras2vec == True:
