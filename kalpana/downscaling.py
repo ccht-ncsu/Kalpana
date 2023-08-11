@@ -1,14 +1,16 @@
-import shutil
 import os
-import subprocess
 import sys
 import time
 import dask
-from tqdm.dask import TqdmCallback
+import shutil
+import subprocess
+import numpy as np
 import geopandas as gpd
 import rioxarray as rxr
 from rasterio.crs import CRS
+from tqdm.dask import TqdmCallback
 from rasterio.enums import Resampling
+from scipy.ndimage import label, find_objects
 from kalpana.export import nc2shp, mesh2gdf, fort14togdf, readSubDomain
 
 '''
@@ -354,7 +356,7 @@ def setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, pkg0, pkg1,
         initGrass(pathGrassLocation, pkg1)
         print(f'        init grass: {(time.time() - ta)/60: 0.3f} min')
         
-def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, exportOrg):
+def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, pkg, myepsg, exportOrg):
     ''' Preprocess kalpana shape file
         Parameters
             kalpanaShp: str
@@ -364,8 +366,8 @@ def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, 
             mesh2ras: boolean
                 True for converting the mesh vector layer to raster
             meshFile: str
-                path of the shapefile with the mes elements or the rasterized version of it.
-                if mesh2ras is False, meshFile must be the path of a raster, if True of a shapefile.
+                path of the shapefile with the mesh elements or the rasterized version of it.
+                if mesh2ras is False, meshFile must be the path of a raster, if True it must be the path of a shapefile.
             minArea: int
                 Minimum size of area to be imported (square meters) 
             myepsg: int
@@ -395,7 +397,7 @@ def setupGrowing(kalpanaShp, attrCol, mesh2ras, meshFile, minArea, pkg, myepsg, 
     
         t0 = time.time()
         pkg.run_command('v.in.ogr', input = meshFile, overwrite = True,
-                        quiet = True, min_area = int(minArea/100)*100, flags = 'o', snap = 0.1)
+                        quiet = True, min_area = 10, flags = 'o', snap = 0.1)
         print(f'        Import mesh shapefile: {(time.time() - t0)/60:0.2f} min')
         
         t0 = time.time()
@@ -434,12 +436,14 @@ def staticGrow(repLenFactor, pkg, meshFile):
     '''
     # elif growRadius > 0: ## grow raster cells with a limiting distance on growRadius
     # growRadiusSq = growRadius**2 #distance on r.grow is calculated using squared metric so it is the squared of the actual distance
+    # kalpanaRast is the output of nc2shp rasterized
     t0 = time.time()
     pkg.run_command('r.grow.distance', input = 'kalpanaRast', metric = 'squared', distance = 'grownRastDist',
                     value = 'grownRastVal', overwrite = True, quiet = True) ## flag m: distance in meters
     t1 = time.time()
     print(f'        Running r.grow algorithm: {(t1 - t0)/60:0.3f} min')
     repLenFactorSq = repLenFactor**2
+    # grownKalpanaRast0 is the horizontaly expanded raster
     pkg.mapcalc("$output = if(!isnull($input), $input, if($dist <= $fac * $radius * $radius, $new, null()))",
           output = 'grownKalpanaRast0', input = 'kalpanaRast', radius = meshFile, base = 'dem', fac = repLenFactorSq,
           new = 'grownRastVal', dist = 'grownRastDist', quiet = True, overwrite = True)
@@ -460,9 +464,11 @@ def clumping(rasterGrown, rasterOrg, rasterNew, clumpSizeThreshold, pkg):
                 threshold to delete isolated cells. Groups of cells smaller than threshold
                 will be removed if are not connected to the main water area.
     '''
+    ## all non-null cells in the grown raster are set to -1
     pkg.mapcalc("$output = if(!isnull($input), -1, null())", output = 'temp1', 
                    input = rasterGrown, quiet = True, overwrite = True)
-
+    
+    ## get clumps
     pkg.run_command('r.clump', input = 'temp1', output = 'temp2', 
                    quiet = True, overwrite = True)
 
@@ -494,8 +500,74 @@ def clumping(rasterGrown, rasterOrg, rasterNew, clumpSizeThreshold, pkg):
     # Passes back grown ADCIRC cells if they coincide with the assigned value (-1).
     pkg.mapcalc("$output = if($A == -1, $B, null())", output = rasterNew, A = 'temp3', 
                B = rasterGrown, quiet = True, overwrite = True)
+#rasterGrown, rasterOrg, rasterNew, clumpSizeThreshold, pkg
+def clumpingV2(rasterOrg, rasterGrown, rasterNew, pkg0, pkg1, leveesShp = None):
+    '''
+  '''
+    ## set to 1 cells originaly wet in the raw raster
+    pkg0.mapcalc("$output = if(!isnull($input), 1, 0)", output = 'kalpanaRast_mask', 
+                    input = rasterOrg, quiet = True, overwrite = True)
+    ## grass raster as numpy array
+    kalpanaRast_mask = pkg1.array('kalpanaRast_mask')
+    
+    if type(leveesShp) == str:
+        ## load levees shapefile
+        pkg0.run_command('v.import', input = leveesShp , output = 'levees', quiet = True, overwrite = True)
+        ## rasterize levees
+        pkg0.run_command('v.to.rast', input = 'levees', type = 'line', output = 'leveesRast', use = 'cat', 
+                            quiet = True, overwrite = True)
+         ## remove water from cells were the leveesRast is defined
+        pkg0.mapcalc("$output = if(isnull($lev), $water, null())",
+                   output = 'grownKalpanaRast2', lev = 'leveesRast', water = rasterGrown,
+                   quiet = True, overwrite = True)
+    else:
+        ## rename raster if levees not provided
+        pkg0.run_command('g.rename', raster = (rasterGrown, 'grownKalpanaRast2'), 
+              overwrite = True, quiet = True)
+     
+     ## mask raster corrected with levees
+    pkg0.mapcalc("$output = if(!isnull($input), 1, 0)", output = 'grownKalpanaRast2_mask', 
+                                input = 'grownKalpanaRast2', quiet = True, overwrite = True)
+    ## raster as numpy array
+    grownKalpanaRast2_mask = pkg1.array('grownKalpanaRast2_mask')
+    grownKalpanaRast2 = pkg1.array('grownKalpanaRast2')
+    ## find clumps in grown kalpana output
+    grownKalpanaRast2_clumps, grownKalpanaRast2_num_clumps = label(grownKalpanaRast2_mask)
+    ## get slices with the clumps, it is like a list of smaller dems
+    grownKalpanaRast2_clump_slices = find_objects(grownKalpanaRast2_clumps)
+    
+    ## intersect the clumps in the grown kalpana outputs with the raw raster to keep only the clumps where there was water originally
+    intersecting_clumps = []
+    for i in range(grownKalpanaRast2_num_clumps):
+        ## get values of kalpanaRast mask at the grown kalapana output clump
+        dummy0 = kalpanaRast_mask[grownKalpanaRast2_clump_slices[i]]
+        ## get values of dummy0 where the slice values match the clump ID
+        dummy1 = dummy0[grownKalpanaRast2_clumps[grownKalpanaRast2_clump_slices[i]] == i+1]
+       
+        if np.any(dummy1 == 1):
+             ## if any of the cells in dummy1 are masked, then we store the modified slice
+            intersecting_clumps.append((grownKalpanaRast2_clumps[grownKalpanaRast2_clump_slices[i]] == i+1).astype(int))
+        else:
+            ## add zero matrix of slice size
+            intersecting_clumps.append(np.zeros_like(dummy0))
+            
+    ## reconstruct the full raster
+    newRaster = pkg1.array()
 
-def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pkg, ras2vec=False):
+    # Iterate through each clump and place it back into the reconstructed matrix
+    for slice_obj, clump in zip(grownKalpanaRast2_clump_slices, intersecting_clumps):
+        # get the coordinates of the clump in the original raster
+        coords = tuple(slice(np.min(s.start, 0), np.min(s.stop, 0)) for s in slice_obj)
+        # Place the clump back into the corresponding positions in the matrix
+        newRaster[coords] = np.maximum(clump, newRaster[coords])
+        
+    newRaster.write(mapname="kalpanaRast2_finalMask", overwrite=True)
+    
+    pkg0.mapcalc("$output = if(!isnull($mask), $grown, null())", grown = 'grownKalpanaRast2', 
+                mask = 'kalpanaRast2_finalMask', output = rasterNew,
+                quiet = True, overwrite = True)
+
+def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, pkg0, pkg1, levShp = None, ras2vec=False):
     ''' Postprocess the grown raster
         Parameters
             compAdcirc2dem: boolean
@@ -506,38 +578,36 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
             kalpanaShp: str
                 path of the shape file with AdCirc results. It is used to save the
                 downscaled shp and raster files
-            clumpThreshold: int or float
-                threshold to delete isolated cells. Groups of cells smaller than threshold will be removed 
-                if are not connected to the main water area.
             ras2vec: boolean. Default False
                 If False output raster are not saved as shapefiles
     '''
-
     # if compArcirc2dem is True means ADCIRC cells with values lower than the dem
     # elevation will be removed
     if compAdcirc2dem == True:
         ta = time.time()
-        pkg.mapcalc("$output = if(!isnull($dem), if($dem > $adcirc, null(), $adcirc), $adcirc)",
+        # grownKalpanaRast1 is the horizontaly expanded raster with wet areas corrected with ground level
+        pkg0.mapcalc("$output = if(!isnull($dem), if($dem > $adcirc, null(), $adcirc), $adcirc)",
                     output = 'grownKalpanaRast1', adcirc = 'grownKalpanaRast0', 
                     dem = 'dem', quiet = True, overwrite = True)
         print(f'        Delete ground level: {(time.time() - ta)/60:0.3f}')
     else:
         ta = time.time()
-        pkg.run_command('g.rename', raster = ('grownKalpanaRast0', 'grownKalpanaRast1'), 
+        pkg0.run_command('g.rename', raster = ('grownKalpanaRast0', 'grownKalpanaRast1'), 
                       overwrite = True, quiet = True)
         print(f'        Rename: {(time.time() - ta)/60:0.3f}')
                       
     ta = time.time()
-    clumping('grownKalpanaRast1', 'kalpanaRast', 'grownKalpanaRastLevel', clumpThreshold, pkg)
+
+    # clumping('grownKalpanaRast1', 'kalpanaRast', 'grownKalpanaRastLevel', clumpThreshold, pkg)
+    clumpingV2('kalpanaRast', 'grownKalpanaRast1', 'grownKalpanaRastLevel', pkg0, pkg1, levShp)
     print(f'        Delete unconnected clumps: {(time.time() - ta)/60:0.3f}')
-    
     
     pathOut = os.path.dirname(kalpanaShp)
     fileOut = os.path.basename(kalpanaShp)[:-4]# remove extension
     
     ta = time.time()
     # export raster as tif
-    pkg.run_command('r.out.gdal', input = 'grownKalpanaRastLevel', flags = 'mc', format = 'GTiff', nodata = -9999, 
+    pkg0.run_command('r.out.gdal', input = 'grownKalpanaRastLevel', flags = 'mc', format = 'GTiff', nodata = -9999, 
                    output = os.path.join(pathOut, f'{fileOut}_level_downscaled.tif'), 
                    overwrite = True)
     print(f'        export as tif level: {(time.time() - ta)/60:0.3f}')
@@ -545,24 +615,24 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
     if ras2vec == True:
         ta = time.time()
         #Export to ESRI shapefile
-        pkg.run_command('r.to.vect', input = 'grownKalpanaRastLevel', output = 'grownKalpanaVectLevel', type = 'area')
+        pkg0.run_command('r.to.vect', input = 'grownKalpanaRastLevel', output = 'grownKalpanaVectLevel', type = 'area')
         print(f'        ras to vector: {(time.time() - ta)/60:0.3f}')
         
         ta = time.time()
-        pkg.run_command('v.out.ogr', input = 'grownKalpanaVectLevel', 
+        pkg0.run_command('v.out.ogr', input = 'grownKalpanaVectLevel', 
                           output = os.path.join(pathOut, f'{fileOut}_level_downscaled'), 
                           type = 'area', format = 'ESRI_Shapefile', flags = 'se', quiet = True, overwrite = True)
         print(f'        export as shp level: {(time.time() - ta)/60:0.3f}')
     
     if floodDepth == True: ## export water depth in flooded cells
         ta = time.time()
-        pkg.mapcalc("$output = if(!isnull($dem) && !isnull($grown), $grown - $dem, null())", grown = 'grownKalpanaRastLevel', 
+        pkg0.mapcalc("$output = if(!isnull($dem) && !isnull($grown), $grown - $dem, null())", grown = 'grownKalpanaRastLevel', 
                     dem = 'dem', output = 'grownKalpanaRastDepth', quiet = True, overwrite = True)
         print(f'        compute water depth: {(time.time() - ta)/60:0.3f}')
         
         ta = time.time()
         # export raster as tif
-        pkg.run_command('r.out.gdal', input = 'grownKalpanaRastDepth', flags = 'cm', format = 'GTiff', nodata = -9999, 
+        pkg0.run_command('r.out.gdal', input = 'grownKalpanaRastDepth', flags = 'cm', format = 'GTiff', nodata = -9999, 
                        output = os.path.join(pathOut, f'{fileOut}_depth_downscaled.tif'), 
                        overwrite = True)
         print(f'        export as tif depth: {(time.time() - ta)/60:0.3f}')
@@ -570,11 +640,11 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, clumpThreshold, pk
         ta = time.time()
         if ras2vec == True:
             #Export to ESRI shapefile
-            pkg.run_command('r.to.vect', input = 'grownKalpanaRastDepth', output = 'grownKalpanaVectDepth', type = 'area')
+            pkg0.run_command('r.to.vect', input = 'grownKalpanaRastDepth', output = 'grownKalpanaVectDepth', type = 'area')
             print(f'        ras to shp depth: {(time.time() - ta)/60:0.3f}')
             
             ta = time.time()
-            pkg.run_command('v.out.ogr', input = 'grownKalpanaVectDepth', 
+            pkg0.run_command('v.out.ogr', input = 'grownKalpanaVectDepth', 
                             output = os.path.join(pathOut, f'{fileOut}_depth_downscaled'), 
                             type = 'area', format = 'ESRI_Shapefile', flags = 'se', quiet = True, overwrite = True)
             print(f'        export as shp depth: {(time.time() - ta)/60:0.3f}')
@@ -583,8 +653,8 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
               epsgIn=4326, vUnitIn='m', vUnitOut='ft', var='zeta_max', conType ='polygon', 
               subDomain=None, epsgSubDom=None, exportMesh=False, dzFile=None, zeroDif=-20, 
               nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', repLenGrowing=1.0, 
-              compAdcirc2dem=True, floodDepth=False, clumpThreshold='from_mesh', perMinElemArea=1, ras2vec=False, exportOrg=False,
-              finalOutToLatLon=True):
+              compAdcirc2dem=True, floodDepth=False, ras2vec=False, exportOrg=False,
+              finalOutToLatLon=True, leveesFile = None):
     ''' Run static downscaling method and the nc2shp function of the kalpanaExport module.
         Parameters
         ********************************************************************************************************************
@@ -689,19 +759,19 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     else:
         gdf = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut, 
                      vUnitIn, epsgIn, subDomain, epsgSubDom, dzFile = dzFile, zeroDif = zeroDif)
-        mesh = gpd.read_file(os.path.splitext(meshFile)[0]+'.shp', ignore_geometry = True) # not fully sure if it is the best way
+        # mesh = gpd.read_file(os.path.splitext(meshFile)[0]+'.shp', ignore_geometry = True) # not fully sure if it is the best way
     
     if epsgOut == 4326:
         sys.exit('Downscaling can not be done for the lat lon crs.')
     
-    if clumpThreshold == 'from_mesh':
-        thres = mesh.elemArea.min() * perMinElemArea ## meter**2
-        if vUnitIn == 'm' and vUnitOut == 'ft':
-            thres = thres * (3.28084)**2 ## ft**2
-        elif vUnitIn == 'm' and vUnitOut == 'm':
-            pass
-    else:
-        thres = clumpThreshold
+    # if clumpThreshold == 'from_mesh':
+        # thres = mesh.elemArea.min() * perMinElemArea ## meter**2
+        # if vUnitIn == 'm' and vUnitOut == 'ft':
+            # thres = thres * (3.28084)**2 ## ft**2
+        # elif vUnitIn == 'm' and vUnitOut == 'm':
+            # pass
+    # else:
+        # thres = clumpThreshold
 
     print(f'Static downscaling started')
     t1 = time.time()
@@ -710,6 +780,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     ## import grass
     import grass.script as gs
     import grass.script.setup as gsetup
+    from grass.script import array as garray
     
     if nameGrassLocation == None:
         pathGrassLocation = os.path.join(pathaux, 'grassLoc')
@@ -731,7 +802,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
      ## setup growing
     print(f'    Start Downscaling preprocess')
     ## here the thres must be in square meters
-    setupGrowing(pathOut, attrCol, exportMesh, meshFile, thres, gs, epsgOut, exportOrg)
+    setupGrowing(pathOut, attrCol, exportMesh, meshFile, gs, epsgOut, exportOrg)
     t3 = time.time()
     print(f'    Downscaling preprocess: {(t3 - t2)/60:0.3f} min')
     
@@ -743,7 +814,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
     
    ## postprocess
     print(f'    Start postprocessing')
-    postProcessStatic(compAdcirc2dem, floodDepth, pathOut, thres, gs, ras2vec)
+    postProcessStatic(compAdcirc2dem, floodDepth, pathOut, gs, garray, leveesFile, ras2vec)
     t5 = time.time()
     print(f'    Ready with postprocess: {(t5 - t4)/60:0.3f} min')
     print(f'Ready with static downscaling: {(t5 - t1)/60:0.3f} min')
