@@ -213,7 +213,7 @@ def main(args):
                 subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif'
         elif runLocation == 'south_carolina':
             if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_res10m_NCSC_SAB123_001.tif' # No shapefiles
+                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_NCSC_SAB123_001.tif' # No shapefiles
                 dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
                 pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
                 rasterFiles = 'SC_CoNED_res10m_002.tif'
