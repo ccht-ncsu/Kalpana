@@ -133,8 +133,8 @@ def createGrassLoc(grassVer, locPath, createLocMethod, myepsg, rasFile):
     out, err = p.communicate()
 
     if p.returncode != 0:
-        print(f'ERROR: {err}', file = sys.stderror)
-        print(f'"ERROR: Cannot create location {startCmd}', file = sys.stderror)
+        print(f'ERROR: {err}', file = sys.stderr)
+        print(f'"ERROR: Cannot create location {startCmd}', file = sys.stderr)
         sys.exit(-1)
 
 def initGrass(locPath, pkg, mapset='PERMANENT'):
@@ -563,7 +563,7 @@ def clumpingV2(rasterOrg, rasterGrown, rasterNew, pkg0, pkg1, leveesShp = None):
         
     newRaster.write(mapname="kalpanaRast2_finalMask", overwrite=True)
     
-    pkg0.mapcalc("$output = if(!isnull($mask), $grown, null())", grown = 'grownKalpanaRast2', 
+    pkg0.mapcalc("$output = if($mask > 0, $grown, $mask)", grown = 'grownKalpanaRast2', 
                 mask = 'kalpanaRast2_finalMask', output = rasterNew,
                 quiet = True, overwrite = True)
 
