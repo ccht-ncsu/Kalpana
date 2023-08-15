@@ -281,7 +281,7 @@ def main(args):
                  compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
 
             # move cog tiff to final directory
-            finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+            finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
             finalFile = finalPathFile.split('/')[-1]
             logger.info('The length of the finalPathFile is: '+str(len(finalPathFile)))
             try:
@@ -407,7 +407,7 @@ def main(args):
 
         # create cog 
         # move cog tiff to final directory
-        finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+        finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
         finalFile = finalPathFile.split('/')[-1]
 
         try:
