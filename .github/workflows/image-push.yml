@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2022 Renaissance Computing Institute. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-RENCI
+# SPDX-License-Identifier: MIT
+
+name: Create and publish the Kalpana k8s Supervisor component. Docker image tagged with "latest" and "version number"
+
+# trigger event is publishing a release in the repo
+on:
+  release:
+    types: [published]
+
+# working parameters that are specific to this script
+env:
+  REGISTRY: containers.renci.org/eds/kalpana
+
+# job definition
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    # job steps
+    steps:
+      # connect to the renci image registry
+      - name: Login to containers.renci.org
+        uses: docker/login-action@v2
+        with:
+          registry: containers.renci.org
+          username: ${{ secrets.USER }}
+          password: ${{ secrets.PW }}
+      
+      # get the tag for the image
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      
+      # build and push the image. The docker v3 action automatically handles the git checkout.
+      - name: Build/Push the image to the registry
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}:latest
+            ${{ env.REGISTRY }}:${{ steps.get_version.outputs.VERSION }}
