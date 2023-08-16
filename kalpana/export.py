@@ -827,6 +827,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     t00 = time.time()
     gdf = runExtractContours(nc, var, levels, conType, epsgIn, stepLevel, orgMaxLevel, 
                             dzFile, zeroDif, timesteps)
+
     logger.info(f'    Ready with the contours extraction: {(time.time() - t00)/60:0.3f} min') # Changed
  
     ## clip contours if requested
@@ -834,6 +835,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         t0 = time.time()
         subDom = readSubDomain(subDomain, epsgSubDom)
         gdf = gpd.clip(gdf, subDom.to_crs(epsgIn))
+
         logger.info(f'    Cliping contours based on mask: {(time.time() - t0)/60:0.3f} min') # Changed
  
     ## change vertical units if requested
@@ -842,14 +844,18 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     else:
         t0 = time.time()
         gdf = gdfChangeVerUnit(gdf, vUnitIn, vUnitOut)
+
         logger.info(f'    Vertical units changed: {(time.time() - t0)/60:0.3f} min') # Changed
+
     ## change CRS if requested
     if epsgIn == epsgOut:
         pass
     else:
         t0 = time.time()
         gdf = gdf.to_crs(epsgOut)
+
         logger.info(f'    Changing CRS: {(time.time() - t0)/60:0.3f} min') # Changed
+
     ## save output shape file
     t0 = time.time()
     if pathOut.endswith('.shp'):
@@ -858,6 +864,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
         gdf.to_file(pathOut, driver = 'GPKG')
     elif pathOut.endswith('.wkt'):
         gdf.to_csv(pathOut)
+
     logger.info(f'    Saving file: {(time.time() - t0)/60:0.3f} min') # Changed
  
     ## export mesh if requested
@@ -939,7 +946,7 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
     gdf['v3'] = elem[:, 2]
     gdf['id'] = range(len(gdf))
 
-    ## compute area and presentative length if the output crs is not lat/lon
+    ## compute area and representative length if the output crs is not lat/lon
     if epsgOut == 4326:
         pass
     else:
@@ -948,7 +955,7 @@ def fort14togdf(filein, epsgIn, epsgOut, fileintype='netcdf'):
         gdf['elemArea'] = [np.round(geom.area, 3) for geom in gdf.geometry]
 
     return gdf
- 
+
 def getDates(ncFile):
     ''' Function to get dates of ADCIRC output file
         Parameters

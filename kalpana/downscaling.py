@@ -757,7 +757,7 @@ def runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterF
         reprojectRas(finalOut, pathaux, epsgOut = 4326)
     logger.info(f'Kalpana finished sucsesfully after: {(t5 - t0)/60:0.3f} min') # Changed
     logger.info(f'Output files saved on: {pathaux}') # Changed
- 
+
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
                       nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', exportDEM=True):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
@@ -826,9 +826,11 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     ## setup grass env
     setGrassEnv(grassVer, pathGrassLocation, createGrassLocation, gs, gsetup,
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
+    
     if exportDEM == True:
         gs.run_command('r.out.gdal', input = 'dem', flags = 'cm', format = 'GTiff', nodata = -9999,
                output = os.path.join(os.path.dirname(pathOut), 'downscaling_dem.tif'))
+    
     ## get minimum area
     minArea = gdfMesh.elemArea.min()
     t0 = time.time()
@@ -873,6 +875,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     if res == 'same':
         logger.info('Reproject '+bname+' to EPSG 4326')
         rasOut = rasIn.rio.reproject(epsgOut)
+
         logger.info('Reprojected '+bname+' to EPSG 4326') # Changed
         logger.info('Write '+bname+' to TIFF') # Changed 
         rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
@@ -891,6 +894,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             scaleFactor = rasIn.rio.resolution()[0] / res
             newWidth = int(rasIn.rio.width * scaleFactor)
             newHeight = int(rasIn.rio.height * scaleFactor)
+
             logger.info('Reproject to EPSG 4326') 
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
@@ -911,6 +915,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             newHeight = int(rasOut.rio.height * scaleFactor)
             rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
                                 resampling = Resampling.bilinear)
+
             #logger.info('Write '+bname+' to COG') # Changed
             #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
             #logger.info('Wrote '+bname+' to COG') # Changed
