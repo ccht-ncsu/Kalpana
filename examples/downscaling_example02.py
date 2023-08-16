@@ -1,12 +1,7 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-## add github repo to path
-#import sys
-#sys.path.append(r'/rsstu/users/j/jcdietri/DHS-CRCoE-2016-2020/tacuevas/github/Kalpana')
 import os
-from kalpana.downscaling import runStatic
-
+import sys
+sys.path.append(r'/home/tacuevas/github/Kalpana/kalpana')
+from downscaling import runStatic
 '''
 Example for doing the static downscaling using an existing grass location, and importing
 the DEM with the mesh elements size. Both inputs were created in the example_01.
@@ -16,24 +11,24 @@ docstring of the function in the github repository.
 
 
 ## full path of the maxele file
-ncFile = r'/mnt/drive1/GoogleDrive/NCSU/NCSU/Kalpana/Docker/inputs/maxele.63.nc'
+ncFile = r'/mnt/drive1/Insyncs/NCSU/Kalpana/Docker/nonInteractive/inputs/maxele.63.nc'
 ## contour levels to use in the downscaling
 ## from 0 to 11 (included) every 1
-levels = [0, 11, 1]
+levels = [0,20, 1]
 ## output CRS
 epsgOut = 6543
 ## full path for the shape file with the maxele contours
 ## same path is used for saving rasters and the grass location
-pathOut = r'/mnt/drive1/GoogleDrive/NCSU/NCSU/Kalpana/Examples_github/example02/maxele_florence.shp'
+pathOut = r'/mnt/drive1/Insyncs/NCSU/Kalpana/Examples_github/example02_NC/maxele_florence.shp'
 ## version of grass 8.2 and 8.3 works
 grassVer = 8.2
 ## path of the downscaling rasters
-pathRasFiles = r'/mnt/drive1/GoogleDrive/NCSU/NCSU/Kalpana/Docker/downscaling/north_carolina/inputs'
+pathRasFiles = r'/mnt/drive1/Insyncs/NCSU/Kalpana/Docker/nonInteractive/downscaling/north_carolina/inputs'
 ## rasters filenames, can be a list if more than one. 
 ## 'all' for importing ALL THE FILES in pathRasFiles 
 rasterFiles = 'ncDEMs_epsg6543'
 ## full path of the raster with the mesh element size
-meshFile = r'/mnt/drive1/GoogleDrive/NCSU/NCSU/Kalpana/Examples_github/example01/NC9.tif'
+meshFile = r'/mnt/drive1/Insyncs/NCSU/Kalpana/Examples_github/example01_NC/NC9_NCdems_15m.tif'
 ## crs of adcirc output (default value)
 epsgIn = 4326
 ## vertical unit of the maxele
@@ -49,20 +44,20 @@ conType = 'polygon'
 subDomain = os.path.join(pathRasFiles, rasterFiles)
 ## epsg code or crs of the subDomain. In this case, as we are using the downscaling dem bounding box
 ## as the subdomain, the same epsg code must be specified.
-epsgSumDom = 6543
+epsgSubDom = 6543
 ## boolean for exporting the mesh as a shape file from maxele, not necessary in this
 ## case since mesh was exported as preprocess. In example_03 it is exported.
 exportMesh = False
 ## full path of pickle file with vertical datum differences for all mesh nodes
 ## proprocess step
-dzFile = r'/mnt/drive1/GoogleDrive/NCSU/NCSU/Kalpana/Docker/downscaling/north_carolina/inputs/NC9mesh_from_tss2navd88.pkl'
+dzFile = r'/mnt/drive1/Insyncs/NCSU/Kalpana/Docker/nonInteractive/downscaling/north_carolina/inputs/NC9mesh_from_tss2navd88.pkl'
 ## threshold to do apply the vertical datum difference, below -20 vyperdatum gives weird
 ## results
 zeroDif = -20
 ## full path of the grass location if a existing one will be used
 ## if None a new location called 'grassLoc' is created. A new location is created in
 ## example_03
-nameGrassLocation = r'/mnt/drive1/GoogleDrive/NCSU/NCSU/Kalpana/Examples_github/example01/grassLoc'
+nameGrassLocation = r'/mnt/drive1/Insyncs/NCSU/Kalpana/Examples_github/example01_NC/grassLoc'
 ## Boolean for creating grass location, in this example it was created as a preprocess
 ## step. In example_03 it is created.
 createGrassLocation = False
@@ -77,20 +72,19 @@ repLenGrowing = 1.0
 compAdcirc2dem = True
 ## transform the water level to water depth
 floodDepth = False
-## define clumpling threshold from mesh
-clumpThreshold = 'from_mesh'
-## percentage of the minimum element area to scale the clumping threshold
-perMinElemArea = 1
 ## export downscaled results as shape files. Slows down the process a couple of minutes
 ras2vec = False
 ## boolean for exporing raw maxele as a DEM. Useful for debugging
 exportOrg = False
+## full path of the shapefile with levees
+leveesFile = None
 ## boolean for reprojecting the downscaled dem back to lat/lon
-finalOutToLatLon = True
+finalOutToLatLon = False
 
 #################### calling downscaling
-runStatic(ncFile, levels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
-          epsgIn, vUnitIn, vUnitOut, var, conType, subDomain, epsgSumDom, exportMesh, dzFile, 
-          zeroDif, nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing, 
-          compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg,
-          finalOutToLatLon)
+runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=epsgIn, 
+                                 vUnitIn=vUnitIn, vUnitOut=vUnitOut, var=var, conType =conType, subDomain=subDomain, epsgSubDom=epsgSubDom, 
+                                 exportMesh= exportMesh, dzFile=dzFile, zeroDif=-zeroDif, nameGrassLocation=nameGrassLocation, 
+                                 createGrassLocation=createGrassLocation, createLocMethod=createLocMethod, attrCol=attrCol, 
+                                 repLenGrowing=repLenGrowing, compAdcirc2dem=compAdcirc2dem, floodDepth=floodDepth, 
+                                 ras2vec=ras2vec, exportOrg=exportOrg, leveesFile = leveesFile, finalOutToLatLon=finalOutToLatLon)
