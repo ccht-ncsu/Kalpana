@@ -961,15 +961,9 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
         rasOut = rasIn.rio.reproject(epsgOut)
 
         logger.info('Reprojected '+bname+' to EPSG 4326') # Changed
-        logger.info('Write '+bname+' to TIFF') # Changed 
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
-        logger.info('Wrote '+bname+' to TIFF') # Changed 
-        program_list = [['gdalwarp', '-of', 'COG', '-co', 'TILING_SCHEME=GoogleMapsCompatible', '-co', 'COMPRESS=DEFLATE', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif')]] # Changed
-        # Run list of program commands using subprocess
-        for program in program_list:
-            logger.info('Write '+bname+' to COG')
-            output = subprocess.run(program, shell=False, check=True)
-            logger.info('Wrote '+bname+' to COG') # Changed
+        logger.info('Write '+bname+' to COG') # Changed 
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
+        logger.info('Wrote '+bname+' to COG') # Changed 
     
     ## change resolution
     else:

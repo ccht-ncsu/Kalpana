@@ -5,6 +5,7 @@ import shutil
 import argparse 
 import psycopg
 import pandas as pd
+import yaml
 from downscaling import meshRepLen2raster, runStatic
 from loguru import logger
 
@@ -142,14 +143,14 @@ def main(args):
                             remove wet cells with water level below the ground surface
                         floodDepth: string   
                             transform the water level to water depth
-                        clumpThreshold: string   
-                            define clumpling threshold from mesh
-                        perMinElemArea: string   
-                            percentage of the minimum element area to scale the clumping threshold
                         ras2vec: string   
                             export downscaled results as shape files
                         exportOrg: string   
                             boolean for exporing raw maxele as a DEM
+                        leveesFile: string
+                            File to use for levees default is None
+                        finalOutToLatLon: string
+                            Boolean (True, False) for reprojecting data to lat/lon projection (epsg: 4326)
         Returns
             None
     '''         
@@ -197,59 +198,44 @@ def main(args):
         # Get ADCIRC filename variables
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
-    
-        if runLocation == 'north_carolina':
-            if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_NCSC_SAB123_002.tif' # NCSC123.tif No shapefiles
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m_003.tif' #'ncDEMs_epsg6543'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif' #ncDEMs_epsg6543
-            elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_HSOFS_003.tif' # No shapefiles or tiff file for hsofs
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m_003.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif'
-        elif runLocation == 'south_carolina':
-            if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_NCSC_SAB123_001.tif' # No shapefiles
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'SC_CoNED_res10m_002.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m_002.tif'
-            elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_HSOFS_003.tif' # No shapefiles
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'SC_CoNED_res10m_002.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m_002.tif'
-        else:
-            logger.info('The runLocation '+runLocation+' is incorrect')
-            sys.exit(1)
 
-        epsgIn = 4326
-        epsgOut = 6346
-        grassVer = '8.2'
+        # Read the runVariable.yml YAML file for the current run location and grid    
+        with open('/data/kalpana/'+runLocation+'/'+grid+'/runVariables.yml', 'r') as file:
+            inputVariables = yaml.safe_load(file)
+
+        # Define input variables extracting their values from YAML object
+        meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/'+inputVariables['meshFilename']
+        dzFile = '/data/kalpana/dzFiles/'+grid+'/'+inputVariables['dzFilename']
+        pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
+        rasterFiles = inputVariables['rasterFiles']
+        subDomain = '/data/kalpana/'+runLocation+'/DEM/'+rasterFiles
+        epsgIn = inputVariables['epsgIn']
+        epsgOut = inputVariables['epsgOut']
+        grassVer = inputVariables['grassVer']
         conLevelsLog = "-".join(map(str, conLevels))
-        vUnitIn = 'm'
-        vUnitOut = 'm'
-        adcircVar = 'zeta_max'
-        conType = 'polygon'
-        epsgSubDom = 6346
-        exportMesh = False
-        zeroDif = -20.0
-        nameGrassLocation = 'grassLoc'
-        createGrassLocation = True 
-        createLocMethod = 'from_raster'
-        attrCol = 'zMean'
-        repLenGrowing = 1.0
-        compAdcirc2dem = True
-        floodDepth = False
-        clumpThreshold = 'from_mesh'
-        perMinElemArea = 1
-        ras2vec = False
-        exportOrg = False
+        vUnitIn = inputVariables['vUnitIn']
+        vUnitOut = inputVariables['vUnitOut']
+        adcircVar = inputVariables['adcircVar']
+        conType = inputVariables['conType']
+        epsgSubDom = inputVariables['epsgSubDom']
+        exportMesh = inputVariables['exportMesh']
+        zeroDif = inputVariables['zeroDif']
+        nameGrassLocation = inputVariables['nameGrassLocation']
+        createGrassLocation = inputVariables['createGrassLocation']
+        createLocMethod = inputVariables['createLocMethod']
+        attrCol = inputVariables['attrCol']
+        repLenGrowing = inputVariables['repLenGrowing']
+        compAdcirc2dem = inputVariables['compAdcirc2dem']
+        floodDepth = inputVariables['floodDepth']
+        ras2vec = inputVariables['ras2vec']
+        exportOrg = inputVariables['exportOrg']
+        finalOutToLatLon = inputVariables['finalOutToLatLon']
+
+        # Convert leveesFile None string to None. The YAML file has None as a boolean, but python yaml sees it as a string?
+        if inputVariables['leveesFile'] == 'None':
+            leveesFile = None
+        else:
+            leveesFile = inputVariables['leveesFile']
 
         if grid == 'NCSC_SAB_v1.23' or grid == 'hsofs':
             logger.info('ncFile '+ncFile+' does use the '+grid+' grid, so begin processing')
@@ -272,16 +258,22 @@ def main(args):
                 logger.info('Directory '+finalDir+' already made.')
 
             # log start of runStatic run
-            logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
+            logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+
+                         grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+
+                         str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+
+                         str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+
+                         str(floodDepth)+', '+str(ras2vec)+', '+str(exportOrg)+', '+str(leveesFile)+', '+str(finalOutToLatLon))
 
             # start runStatic run
-            runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
-                 epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, epsgSubDom, exportMesh, dzFile, zeroDif,
-                 nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
-                 compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
+            runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=epsgIn, 
+                      vUnitIn=vUnitIn, vUnitOut=vUnitOut, var=adcircVar, conType=conType, subDomain=subDomain, epsgSubDom=epsgSubDom, 
+                      exportMesh=exportMesh, dzFile=dzFile, zeroDif=zeroDif, nameGrassLocation=nameGrassLocation, 
+                      createGrassLocation=createGrassLocation, createLocMethod=createLocMethod, attrCol=attrCol, 
+                      repLenGrowing=repLenGrowing,compAdcirc2dem=compAdcirc2dem, floodDepth=floodDepth, 
+                      ras2vec=ras2vec, exportOrg=exportOrg, leveesFile=leveesFile, finalOutToLatLon=finalOutToLatLon)
 
             # move cog tiff to final directory
-            finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
+            finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
             finalFile = finalPathFile.split('/')[-1]
             logger.info('The length of the finalPathFile is: '+str(len(finalPathFile)))
             try:
@@ -366,9 +358,6 @@ def main(args):
         else:
             logger.info('floodDepth value has to be True or False')
 
-        clumpThreshold = args.clumpThreshold
-        perMinElemArea = int(args.perMinElemArea)
-
         # convert from string to bool
         if args.ras2vec == 'True':
             ras2vec = True
@@ -385,6 +374,20 @@ def main(args):
         else:
             logger.info('exportOrg value has to be True or False')
 
+        # convert from string to bool
+        if args.leveesFile == 'None':
+            leveesFile = None
+        else:
+            leveesFile = leveesFile
+
+            # convert from string to bool
+        if args.finalOutToLatLon == 'True':
+            finalOutToLatLon = True
+        elif args.finalOutToLatLon == 'False':
+            finalOutToLatLon = False
+        else:
+            logger.info('finalOutToLatLon value has to be True or False')
+
         # Create outputs directory for second process shape, and tiff files
         outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
         finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
@@ -397,17 +400,22 @@ def main(args):
             logger.info('Directories '+outputDir+' and '+finalDir+' already made.')
 
         # log start of runStatic run
-        logger.info('Start runScript with the following inputs: '+runScript+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+clumpThreshold+', '+str(perMinElemArea)+', '+str(ras2vec)+', '+str(exportOrg))
+        logger.info('Start runScript with the following inputs: '+runScript+', '+epsgIn+', '+epsgOut+', '+pathOut+', '+grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+
+                    vUnitOut+', '+adcircVar+', '+conType+', '+str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+str(createGrassLocation)+', '+
+                    createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+str(floodDepth)+', '+str(ras2vec)+', '+str(exportOrg))
 
         # start runStatic run
-        runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile,
-             epsgIn, vUnitIn, vUnitOut, adcircVar, conType, subDomain, epsgSubDom, exportMesh, dzFile, zeroDif,
-             nameGrassLocation, createGrassLocation, createLocMethod, attrCol, repLenGrowing,
-             compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
+        runStatic(ncFile, conLevels, epsgOut, pathOut,  grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=epsgIn, 
+                    vUnitIn=vUnitIn, vUnitOut=vUnitOut, var=adcircVar, conType=conType, subDomain=subDomain, epsgSubDom=epsgSubDom, 
+                    exportMesh=exportMesh, dzFile=dzFile, zeroDif=zeroDif, nameGrassLocation=nameGrassLocation, 
+                    createGrassLocation=createGrassLocation, createLocMethod=createLocMethod, attrCol=attrCol, 
+                    repLenGrowing=repLenGrowing,compAdcirc2dem=compAdcirc2dem, floodDepth=floodDepth, 
+                    ras2vec=ras2vec, exportOrg=exportOrg, leveesFile=leveesFile, finalOutToLatLon=finalOutToLatLon)
 
         # create cog 
         # move cog tiff to final directory
-        finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
+        '''
+        finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
         finalFile = finalPathFile.split('/')[-1]
 
         try:
@@ -416,6 +424,7 @@ def main(args):
         except OSError as err:
             logger.error(err)
             sys.exit(1)
+        '''
 
 if __name__ == "__main__":
     ''' Takes argparse inputs and passes theme to the main function
@@ -507,14 +516,16 @@ if __name__ == "__main__":
                             remove wet cells with water level below the ground surface
                         floodDepth: string   
                             transform the water level to water depth
-                        clumpThreshold: string   
-                            define clumpling threshold from mesh
-                        perMinElemArea: string   
-                            percentage of the minimum element area to scale the clumping threshold
                         ras2vec: string   
                             export downscaled results as shape files
                         exportOrg: string   
                             boolean for exporing raw maxele as a DEM
+                            leveesFile: string
+                            File to use for levees default is None
+                        leveesFile: string
+                            File to use for levees default is None
+                        finalOutToLatLon: string
+                            Boolean (True, False) for reprojecting data to lat/lon projection (epsg: 4326)
         Returns
             None
     '''         
@@ -573,10 +584,9 @@ if __name__ == "__main__":
         parser.add_argument("--repLenGrowing", help="how many times the representative length the results are grown in the downscaling", action="store", dest="repLenGrowing", required=True)
         parser.add_argument("--compAdcirc2dem", help="remove wet cells with water level below the ground surface", action="store", dest="compAdcirc2dem", choices=['True','False'], required=True)
         parser.add_argument("--floodDepth", help="transform the water level to water depth", action="store", dest="floodDepth", choices=['True','False'], required=True)
-        parser.add_argument("--clumpThreshold", help="define clumpling threshold from mesh", action="store", dest="clumpThreshold", required=True)
-        parser.add_argument("--perMinElemArea", help="percentage of the minimum element area to scale the clumping threshold", action="store", dest="perMinElemArea", required=True)
         parser.add_argument("--ras2vec", help="export downscaled results as shape files", action="store", dest="ras2vec", choices=['True','False'], required=True)
-        parser.add_argument("--exportOrg", help="boolean for exporing raw maxele as a DEM", action="store", dest="exportOrg", choices=['True','False'], required=True)
+        parser.add_argument("--leveesFile", help="File to use for levees default is None", action="store", dest="leveesFile", choices=['True','False'], required=True)
+        parser.add_argument("--finalOutToLatLon", help="Boolean (True, False) for reprojecting data to lat/lon projection (epsg: 4326)", action="store", dest="finalOutToLatLon", choices=['True','False'], required=True)
 
     # parse arguments and run main
     args = parser.parse_args()
