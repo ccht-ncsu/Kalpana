@@ -959,12 +959,20 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     if res == 'same':
         logger.info('Reproject '+bname+' to EPSG 4326')
         rasOut = rasIn.rio.reproject(epsgOut)
-
         logger.info('Reprojected '+bname+' to EPSG 4326') # Changed
-        logger.info('Write '+bname+' to COG') # Changed 
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
-        logger.info('Wrote '+bname+' to COG') # Changed 
-    
+        #logger.info('Write '+bname+' to COG') # Changed 
+        #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
+        #logger.info('Wrote '+bname+' to COG') # Changed 
+        logger.info('Write '+bname+' to TIFF') # Changed 
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
+        logger.info('Wrote '+bname+' to TIFF') # Changed 
+        program_list = [['rio', 'cogeo', 'create', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif', '--web-optimized')]] # Changed 
+        # Run list of program commands using subprocess                                                                                                                                                                            
+        for program in program_list:                                                                                                                                                                                               
+            logger.info('Write '+bname+' to COG')                                                  
+            output = subprocess.run(program, shell=False, check=True)                      
+            logger.info('Wrote '+bname+' to COG') # Changed       
+   
     ## change resolution
     else:
         ## same crs
@@ -973,37 +981,39 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             newWidth = int(rasIn.rio.width * scaleFactor)
             newHeight = int(rasIn.rio.height * scaleFactor)
 
-            logger.info('Reproject to EPSG 4326') 
+            logger.info('Reproject '+bname+' Resampling.bilinear 1') # Changed
             rasOut = rasIn.rio.reproject(rasIn.rio.crs, shape = (newHeight, newWidth),
                                         resampling = Resampling.bilinear)
+            logger.info('Reprojected '+bname+' Resampling.bilinear 1') # Changed
             logger.info('Write '+bname+' to TIFF') # Changed
+            #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif'), driver="COG") # Changed
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_res{res}.tif')) # Changed
             logger.info('Wrote '+bname+' to TIFF') # Changed
-            program_list = [['gdalwarp', '-of', 'COG', '-co', 'TILING_SCHEME=GoogleMapsCompatible', '-co', 'COMPRESS=DEFLATE', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif')]] # Changed
+            program_list = [['rio', 'cogeo', 'create', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif', '--web-optimized')]] # Changed 
             # Run list of program commands using subprocess                                                                                                                                                                            
             for program in program_list:                                                                                                                                                                                               
-                logger.info('Write '+bname+' to COG')                    
-                output = subprocess.run(program, shell=False, check=True)                                                                                                                                                              
-                logger.info('Wrote '+bname+' to COG') # Changed          
-
+                logger.info('Write '+bname+' to COG')                                                  
+                output = subprocess.run(program, shell=False, check=True)                      
+                logger.info('Wrote '+bname+' to COG') # Changed 
         else:
             rasOut = rasIn.rio.reproject(epsgOut)
             scaleFactor = rasOut.rio.resolution()[0] / res
             newWidth = int(rasOut.rio.width * scaleFactor)
             newHeight = int(rasOut.rio.height * scaleFactor)
+            logger.info('Reproject '+bname+' Resampling.bilinear 2') # Changed
             rasOut = rasIn.rio.reproject(rasOut.rio.crs, shape = (newHeight, newWidth),
                                 resampling = Resampling.bilinear)
-
+            logger.info('Reprojected '+bname+' Resampling.bilinear 2') # Changed
             #logger.info('Write '+bname+' to COG') # Changed
-            #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'))
+            #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_res{res}.tif'), driver="COG")
             #logger.info('Wrote '+bname+' to COG') # Changed
             logger.info('Write '+bname+' to TIFF') # Changed                                                                                                                                                                           
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed                                                                                                                                       
             logger.info('Wrote '+bname+' to TIFF') # Changed 
-            program_list = [['gdalwarp', '-of', 'COG', '-co', 'TILING_SCHEME=GoogleMapsCompatible', '-co', 'COMPRESS=DEFLATE', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif')]] # Changed 
+            program_list = [['rio', 'cogeo', 'create', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif', '--web-optimized')]] # Changed 
             # Run list of program commands using subprocess                                                                                                                                                                            
             for program in program_list:                                                                                                                                                                                               
-                logger.info('Write '+bname+' to COG')                                                  
+                logger.info('Write '+bname+' to COG') # Changed  
                 output = subprocess.run(program, shell=False, check=True)                      
                 logger.info('Wrote '+bname+' to COG') # Changed                    
  

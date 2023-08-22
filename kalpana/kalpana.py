@@ -273,7 +273,7 @@ def main(args):
                       ras2vec=ras2vec, exportOrg=exportOrg, leveesFile=leveesFile, finalOutToLatLon=finalOutToLatLon)
 
             # move cog tiff to final directory
-            finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
+            finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
             finalFile = finalPathFile.split('/')[-1]
             logger.info('The length of the finalPathFile is: '+str(len(finalPathFile)))
             try:
