@@ -1,0 +1,25 @@
+========================================================================
+ Louisiana Levees - Lines
+------------------------------------------------------------------------
+ https://koordinates.com/layer/20449-louisiana-levees-lines/
+========================================================================
+From: US National Oceanic and Atmospheric Administration (NOAA)
+
+Region: Louisiana
+
+CRS: WGS 84
+
+------------------------------------------------------------------------
+ Processing steps applied by Koordinates
+------------------------------------------------------------------------
+
+- imported to Koordinates in Esri JSON format on 30 Aug 2016
+- reprojected from WGS 84 / Pseudo-Mercator to WGS 84
+- converted by Koordinates to Shapefile on 27 Jun 2022 (reference #2537192)
+
+====================
+No license specified
+====================
+
+No license was specified for this layer. This could mean default rights under copyright law for your legal jurisdiction may apply. Please check with Koordinates if you're unsure of your right to access and use this layer.
+
