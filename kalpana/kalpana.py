@@ -84,10 +84,6 @@ def main(args):
                     getADCIRCFileNameVariables
                         modelRunID: string
                             unique identifier of a model run. It combines the instance_id, and uid from asgs_dashboard db.
-                        runLocation: string
-                            the location (e.g., north_carolina, south_carolina) to process the data.
-                        conLevels: string
-                            contour levels to use in the downscaling.
                 runStatic, runs static downscaling creating a grass location, and importing the DEM with the mesh elements size.
                     Both inputs were created by the meshRepLen2raster process.
                         # arguments common to both the meshRepLen2raster, and runStatic processes
@@ -188,9 +184,8 @@ def main(args):
 
     elif args.runScript == 'runStaticShort':
         # define runStatic input variables
-        runLocation = args.runLocation
         modelRunID = args.modelRunID
-        pathOut = '/data/'+modelRunID+'/kalpana/'+runLocation+'/maxele.shp'
+        pathOut = '/data/'+modelRunID+'/kalpana/maxele.shp'
         ncFile = '/data/'+modelRunID+'/input/maxele.63.nc'
         conLevels = [float(i) for i in args.conLevels.split(',')]
 
@@ -198,45 +193,25 @@ def main(args):
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
     
-        if runLocation == 'north_carolina':
-            if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_NCSC_SAB123_002.tif' # NCSC123.tif No shapefiles
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m_003.tif' #'ncDEMs_epsg6543'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif' #ncDEMs_epsg6543
-            elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/NC_CoNED_HSOFS_003.tif' # No shapefiles or tiff file for hsofs
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'NC_CoNED_res10m_003.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/NC_CoNED_res10m_003.tif'
-        elif runLocation == 'south_carolina':
-            if grid == 'NCSC_SAB_v1.23': 
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_NCSC_SAB123_001.tif' # No shapefiles
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'SC_CoNED_res10m_002.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m_002.tif'
-            elif grid  == 'hsofs':
-                meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/SC_CoNED_HSOFS_003.tif' # No shapefiles
-                dzFile = '/data/kalpana/dzFiles/'+grid+'/HSOFS_msl2navd88.pkl'
-                pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-                rasterFiles = 'SC_CoNED_res10m_002.tif'
-                subDomain = '/data/kalpana/'+runLocation+'/DEM/SC_CoNED_res10m_002.tif'
-        else:
-            logger.info('The runLocation '+runLocation+' is incorrect')
-            sys.exit(1)
+        if grid == 'NCSC_SAB_v1.23': 
+            meshFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC123.tif'
+            dzFile = '/data/kalpana/north_carolina/inputs/'+grid+'/NCSC_SAB_123_msl2navd88.pkl'
+        elif grid  == 'hsofs':
+            meshFile = '/data/kalpana/north_carolina/inputs/'+grid+'/HSOFS.tif'
+            dzFile = '/data/kalpana/north_carolina/inputs/'+grid+'/HSOFS_msl2navd88.pkl'
 
         epsgIn = 4326
-        epsgOut = 6346
+        epsgOut = 6543
         grassVer = '8.2'
+        pathRasFiles = '/data/kalpana/north_carolina/inputs/'+grid+'/'
+        rasterFiles = 'ncDEMs_epsg6543'
         conLevelsLog = "-".join(map(str, conLevels))
         vUnitIn = 'm'
         vUnitOut = 'm'
         adcircVar = 'zeta_max'
         conType = 'polygon'
-        epsgSubDom = 6346
+        subDomain = '/data/kalpana/north_carolina/inputs/'+grid+'/ncDEMs_epsg6543'
+        epsgSubDom = 6543
         exportMesh = False
         zeroDif = -20.0
         nameGrassLocation = 'grassLoc'
@@ -256,7 +231,7 @@ def main(args):
 
             # Create outputs directory for second process shape, and tiff files
             outputDir = "/".join(pathOut.split('/')[0:-1])+'/'
-            finalDir = "/".join(outputDir.split('/')[0:-3])+'/final/kalpana/'+runLocation+'/'
+            finalDir = "/".join(outputDir.split('/')[0:-2])+'/final/kalpana/'
             if not os.path.exists(outputDir):
                 mode = 0o777
                 os.makedirs(outputDir, mode, exist_ok=True)
@@ -281,7 +256,7 @@ def main(args):
                  compAdcirc2dem, floodDepth, clumpThreshold, perMinElemArea, ras2vec, exportOrg)
 
             # move cog tiff to final directory
-            finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
+            finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
             finalFile = finalPathFile.split('/')[-1]
             logger.info('The length of the finalPathFile is: '+str(len(finalPathFile)))
             try:
@@ -407,7 +382,7 @@ def main(args):
 
         # create cog 
         # move cog tiff to final directory
-        finalPathFile = glob.glob(outputDir+'*_epsg4326_cog.tif')[0]
+        finalPathFile = glob.glob(outputDir+'*_epsg4326.tif')[0]
         finalFile = finalPathFile.split('/')[-1]
 
         try:
@@ -449,10 +424,6 @@ if __name__ == "__main__":
                     getADCIRCFileNameVariables
                         modelRunID: string
                             unique identifier of a model run. It combines the instance_id, and uid from asgs_dashboard db.
-                        runLocation: string
-                            the location (e.g., north_carolina, south_carolina) to process the data.
-                        conLevels: string
-                            contour levels to use in the downscaling.
                 runStatic, runs static downscaling creating a grass location, and importing the DEM with the mesh elements size.
                     Both inputs were created by the meshRepLen2raster process.
                         # arguments common to both the meshRepLen2raster, and runStatic processes
@@ -542,7 +513,6 @@ if __name__ == "__main__":
         parser.add_argument("--sbFile", help="directory path and name of sbFile file", action="store", dest="sbFile", required=True)
     elif args.runScript == 'runStaticShort':
         parser.add_argument("--modelRunID", help="the modelRunID, which is a combination of the instance_id and uid", action="store", dest="modelRunID", required=True)
-        parser.add_argument("--runLocation", help="the location (e.g., north_carolina, south_carolina) to process the data", action="store", dest="runLocation", required=True)
         parser.add_argument("--conLevels", help="contour levels to use in the downscaling", action="store", dest="conLevels", required=True)
     elif args.runScript == 'runStatic':
         # arguments not specific to the meshRepLen2raster process
