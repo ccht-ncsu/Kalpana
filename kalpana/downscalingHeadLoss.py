@@ -200,7 +200,7 @@ def costSurface(res, pkg, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1], URCons
     logger.info(f"    Raw cost calculation {(time.time() - t2)/60:0.2f} min")
 
 def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRasFiles, rasterFiles, myepsg, manningRasPath, manningLandCover, 
-                                    pathOutRawCostRas, pathOutTotalCostRas, nameGrassLocation = None, createLocMethod = 'from_raster', URConstant=1, 
+                                    pathOutRawCostRas, pathOutTotalCostRas, pathOutCorrDownDEM, nameGrassLocation = None, createLocMethod = 'from_raster', URConstant=1, 
                                     k=1, waterClass=11, minArea=20000000, res=5, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1]):
     '''
     Compute a cost surface for base on frictions (mannings) and elevation change.
@@ -221,6 +221,8 @@ def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRas
     manningLandCover (str): Path to the rules file for reclassifying land cover classes to Manning's n values.
     pathOutRawCostRas (str): full path of the output raw cost raster 
     pathOutTotalCostRas (str): full path of the output total cost raster
+    pathOutCorrDownDEM (str): full path of the downscaling DEM corrected with land cover. If the DEM doesn't have bathy
+        null cells are filled with 0 only if the land class raster is water. The 0 bathy does not affect the cost calculation
     nameGrassLocation (str): Name of the GRASS GIS location. Default is None
     createLocMethod (str, optional): Two options "from_epsg" or "from_raster" (default) otherwise an error will be thrown.
     URConstant (float, optional): Unit Runoff Constant for the Manning's equation. Default is 1.
@@ -284,6 +286,8 @@ def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRas
                output = pathOutRawCostRas, overwrite = True, quiet = True)
     gs.run_command('r.out.gdal', input = 'totalCost', flags = 'cm', format = 'GTiff', nodata = -9999, 
                output = pathOutTotalCostRas, overwrite = True, quiet = True)
+    gs.run_command('r.out.gdal', input = 'demCorr', flags = 'cm', format = 'GTiff', nodata = -9999, 
+           output = pathOutCorrDownDEM, overwrite = True, quiet = True)
     
     t5 = time.time()
     logger.info(f"    Compute cost surface {(t5 - t4)/60:0.2f} min")
