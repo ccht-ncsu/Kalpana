@@ -121,7 +121,7 @@ def setMSLras(pkg, waterClass=11, minArea=20000000):
     pkg.mapcalc("$output=if(!isnull(waterReclass) && water == 0, 0, null())",
                 output="waterFinal", overwrite=True, quiet=True)
 
-def costSurface(res, pkg, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1], URConstant=1):
+def costSurface(res, pkg, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1], URConstant=1, waterClass=11):
     '''
     Pre-computes a cost surface for pathfinding based on specified parameters.
 
@@ -137,6 +137,7 @@ def costSurface(res, pkg, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1], URCons
     slopeFactor (float, optional): Slope factor for r.walk algorithm. Default is -0.2125.
     walkCoeefs (list of float, optional): Walk coefficients for r.walk algorithm. Default is [0, 1, -1, -1].
     URConstant (float, optional): Unit Runoff Constant for the Manning's equation. Default is 1.
+    waterClass (int, optional): Land cover class value representing water bodies. Default is 11.
 
     Returns:
     None: The function performs necessary operations to pre-compute the cost surface.
@@ -162,9 +163,11 @@ def costSurface(res, pkg, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1], URCons
 
     pkg.mapcalc("totalCost=50000",
                 overwrite=True, quiet=True)
-        
+    logger.info(f"        Starting r.wak iterations")
+    i = 0
+    t0 = time.time()
     for xVal, yVal in zip(xgr.ravel(), ygr.ravel()):
-        
+        t1 = time.time()
         ## set previous loop results to oldCostMap
         pkg.run_command('g.rename', raster="totalCost,oldCostMap",
                         overwrite=True, quiet=True)
@@ -181,11 +184,20 @@ def costSurface(res, pkg, slopeFactor=-0.2125, walkCoeefs=[0, 1, -1, -1], URCons
         pkg.mapcalc("$newVal=if(!isnull($valFromLoop)&&&$valFromLoop<$oldVal,$valFromLoop,$oldVal)",
                     newVal="totalCost", valFromLoop="walkValsFromLoop", 
                     oldVal="oldCostMap", overwrite=True, quiet=True)
+        logger.info(f"        Done with iteration {1 + i}/{len(xgr.ravel())} after {(time.time() - t1)/60:0.2f} min")
+        i += 1
     
-    pkg.mapcalc("$output=if(!isnull(dem), $totalCost, ($totalCost-$dem)/($URConstant^2))",
-                output = "rawCost", totalCost = "totalCost",
-                dem = "dem", URConstant=URConstant,
+    logger.info(f"    r.walk finished after {(time.time() - t0)/60:0.2f} min")
+    ## this line is to add 0 elevation to the water cells in case the raster doesn't have bathy
+    pkg.mapcalc(f"$output=if(isnull(dem) &&& landCoverClass == {waterClass}, 0, dem)",
+            output = "demCorr", overwrite=True, quiet=True)
+    logger.info(f"    Assigning elevation 0 to null cells clasified as water {(time.time() - t1)/60:0.2f} min")
+    
+    t2 = time.time()
+    pkg.mapcalc("$output=if(!isnull(demCorr), $totalCost, ($totalCost-demCorr)/($URConstant^2))",
+                output = "rawCost", totalCost = "totalCost", URConstant=URConstant,
                 overwrite=True, quiet=True)
+    logger.info(f"    Raw cost calculation {(time.time() - t2)/60:0.2f} min")
 
 def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRasFiles, rasterFiles, myepsg, manningRasPath, manningLandCover, 
                                     pathOutRawCostRas, pathOutTotalCostRas, nameGrassLocation = None, createLocMethod = 'from_raster', URConstant=1, 
@@ -266,7 +278,7 @@ def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRas
     t4 = time.time()
     logger.info(f"    Set MSL raster {(t4 - t3)/60:0.2f} min")
 
-    logger.info(f"    Started the cost surface computation, may take a considerable time")
+    logger.info(f"    Started the cost surface computation, may take some hours")
     costSurface(res, gs, slopeFactor, walkCoeefs, URConstant)
     gs.run_command('r.out.gdal', input = 'rawCost', flags = 'cm', format = 'GTiff', nodata = -9999, 
                output = pathOutRawCostRas, overwrite = True, quiet = True)
