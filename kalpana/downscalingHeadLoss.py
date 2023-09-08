@@ -292,7 +292,7 @@ def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRas
     t5 = time.time()
     logger.info(f"    Compute cost surface {(t5 - t4)/60:0.2f} min")
 
-def setupHeadLoss(kalpanaShp, attrCol, myepsg, rawCostRas, totalCostRas, pkg, exportOrg):
+def setupHeadLoss(kalpanaShp, attrCol, myepsg, rawCostRas, totalCostRas, corrDownDEM, pkg, exportOrg):
     '''
     Preprocesses Kalpana shape file and imports cost rasters for head loss analysis.
 
@@ -307,6 +307,7 @@ def setupHeadLoss(kalpanaShp, attrCol, myepsg, rawCostRas, totalCostRas, pkg, ex
     myepsg (int): Output coordinate reference system (EPSG code).
     rawCostRas (str): Path of the raw cost raster.
     totalCostRas (str): Path of the total cost raster.
+    corrDownDEM (str): Path of the downscaling DEM corrected with land class water cells
     pkg: The package/module used for executing GRASS GIS commands.
     exportOrg (bool, optional): True to export the raw ADCIRC outputs (without growing) as a GeoTIFF. Default is False.
 
@@ -333,7 +334,7 @@ def setupHeadLoss(kalpanaShp, attrCol, myepsg, rawCostRas, totalCostRas, pkg, ex
 
     ## import cost rasters
     t1 = time.time()
-    importRasters_parallel([rawCostRas, totalCostRas], pkg, myepsg)
+    importRasters_parallel([rawCostRas, totalCostRas, corrDownDEM], pkg, myepsg)
     logger.info(f'        Import cost rasters: {(time.time() - t1)/60:0.2f} min')
 
     ## rename files
@@ -342,6 +343,8 @@ def setupHeadLoss(kalpanaShp, attrCol, myepsg, rawCostRas, totalCostRas, pkg, ex
                         overwrite = True, quiet = True)
     pkg.run_command('g.rename', raster = (os.path.splitext(os.path.basename(totalCostRas))[0], 'totalCost'), 
                     overwrite = True, quiet = True)
+    pkg.run_command('g.rename', raster = (os.path.splitext(os.path.basename(corrDownDEM))[0], 'demCorr'), 
+                overwrite = True, quiet = True)
     logger.info(f'        Rename cost rasters: {(time.time() - t2)/60:0.2f} min')
     
     ## update raw cost
@@ -403,7 +406,7 @@ def headLossGrow(exagVal, floodDepth, pkg):
         ## between current window and ADCIRC raw costs using the average hydraulic radius.
         t3 = time.time()
         pkg.mapcalc('$output=if($ADCIRC_WLVal>$dem&&$ADCIRC_WLVal>($dem+$exag*($rawCost-$rawCostADCIRCVal)*(1/($ADCIRC_WLVal-0.5*$dem)^(2/3))^2),$ADCIRC_WLVal,null())',
-                    output="forecastWLnotClumped", ADCIRC_WLVal="kalpanaRastGrownVal", dem="dem", exag=exagVal,
+                    output="forecastWLnotClumped", ADCIRC_WLVal="kalpanaRastGrownVal", dem="demCorr", exag=exagVal,
                     rawCost="rawCost", rawCostADCIRCVal="rawCostADCIRCVal",
                     overwrite=True, quiet=True)
         logger.info(f'        Compare extrapolated ADCIRC to cost : {(time.time() - t3)/60:0.2f} min')
@@ -414,14 +417,14 @@ def headLossGrow(exagVal, floodDepth, pkg):
         pkg.mapcalc('''$output=if($ADCIRC_WLVal>$dem&&$dem>0&&$ADCIRC_WLVal>($dem+$exag*($rawCost-$rawCostADCIRCVal)*
                     (1/($ADCIRC_WLVal-0.5*$dem)^(2/3))^2),$ADCIRC_WLVal-($dem+$exag*($rawCost-$rawCostADCIRCVal)*
                     (1/($ADCIRC_WLVal-0.5*$dem)^(2/3))^2),null())''',
-                    output="forecastWLnotClumped_temp", ADCIRC_WLVal="kalpanaRastGrownVal", dem="dem",
+                    output="forecastWLnotClumped_temp", ADCIRC_WLVal="kalpanaRastGrownVal", dem="demCorr",
                     exag=exagVal, rawCost="rawCost", rawCostADCIRCVal="rawCostADCIRCVal",
                     quiet=True, overwrite=True)
 
         ## temporary fix for depths where rawCost < rawCostADCIRCVal
         pkg.mapcalc('''$output=if(!isnull($forecastWLnotClumped_temp)&&$rawCostADCIRCVal>$rawCost,$ADCIRC_WLVal-$dem,
                     $forecastWLnotClumped_temp)''',
-                    output="forecastWLnotClumped", forecastWLnotClumped_temp="forecastWLnotClumped_temp", dem="dem", 
+                    output="forecastWLnotClumped", forecastWLnotClumped_temp="forecastWLnotClumped_temp", dem="demCorr", 
                     rawCostADCIRCVal="rawCostADCIRCVal", rawCost="rawCost", ADCIRC_WLVal="kalpanaRastGrownVal", 
                     quiet=True, overwrite=True)
         logger.info(f'        Compare extrapolated ADCIRC to cost : {(time.time() - t4)/60:0.2f} min')
@@ -507,7 +510,7 @@ def postProcessHeadLoss(floodDepth, kalpanaShp, pkg0, pkg1, ras2vec):
             logger.info(f'        export as shp depth: {(time.time() - t7)/60:0.3f} min') # 
 
 def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFiles, rasterFiles,
-                rawCostRas, totalCostRas, epsgIn=4326, vUnitIn='m', var='zeta_max', conType ='polygon', 
+                rawCostRas, totalCostRas, corrDownDEM, epsgIn=4326, vUnitIn='m', var='zeta_max', conType ='polygon', 
                 subDomain=None, epsgSubDom=None, dzFile=None, zeroDif=-20, exagVal=1, nameGrassLocation=None, 
                 createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', floodDepth=False, 
                 ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
@@ -529,6 +532,7 @@ def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFil
     rasterFiles (list of str): List of raster filenames.
     rawCostRas (str): Path of the raw cost raster.
     totalCostRas (str): Path of the total cost raster.
+    corrDownDEM (str): Path of the downscaling DEM corrected with land cover
     epsgIn (int, optional): Input EPSG code for the NetCDF file. Default is 4326.
     vUnitIn (str, optional): Input vertical unit of the NetCDF file. Default is 'm'.
     var (str, optional): Variable name in the NetCDF file. Default is 'zeta_max'.
@@ -593,7 +597,7 @@ def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFil
 
     ## preprocess for downscaling
     t2 = time.time()
-    setupHeadLoss(pathOut, attrCol, epsgOut, rawCostRas, totalCostRas, gs, exportOrg)
+    setupHeadLoss(pathOut, attrCol, epsgOut, rawCostRas, totalCostRas, corrDownDEM, gs, exportOrg)
     logger.info(f'    Downscaling preprocess: {(time.time() - t2)/60:0.3f} min')
 
     ## run downscaling
