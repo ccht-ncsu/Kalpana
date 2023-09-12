@@ -3,7 +3,9 @@
 *Kalpana* has two main capabilities:
 
 1. Visualization: convert *ADCIRC* output as geospatial vector data for visualization using QGIS or any similar GIS software.<br>
-2.Downscaling: transform the *ADCIRC* *maxele.63.nc* file to a higher-resolution raster (Rucker et. al 2021).<br>
+
+2. Downscaling: transform the *ADCIRC* *maxele.63.nc* file to a higher-resolution raster (Rucker et. al 2021).<br>
+
 2.1 Static: by considering small-scale topographic features.<br>
 2.2 Head Loss: considering small-scale topographic features and energy loss due to bottom friction using a land cover dataset.<br>
 
