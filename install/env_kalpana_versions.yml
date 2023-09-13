@@ -254,4 +254,6 @@ dependencies:
   - zipp=3.13.0=pyhd8ed1ab_0
   - zlib=1.2.13=h166bdaf_4
   - zstd=1.5.2=h3eb15da_6
+  - pip:
+      - loguru==0.7.0
 prefix: /usr/local/usrapps/jcdietri/conda/env_kalpana_v1
