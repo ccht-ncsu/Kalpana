@@ -16,3 +16,4 @@ dependencies:
  - tqdm
  - numpy
  - shapely
+ - loguru
