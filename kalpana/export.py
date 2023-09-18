@@ -61,88 +61,52 @@ def gdfChangeVerUnit(gdf, ini, out):
     
     return gdf2
 
-def dzDatum(vdatum_directory, x, y, pathout, vdatumIn='tss', 
-            vdatumOut='navd88', epsg1=6319, epsg2=7912,
-            areaFile="xGeoid20B_R1.gpkg", pkg=None):
-    ''' Get the vertical difference of two datums on a group of locations
-        Parameters
-            vdatum_directory: string
-                full path of the instalation folder of vdatum (https://vdatum.noaa.gov/)
-            x, y: numpy array
-                x and y-coordinate of the group of points
-            vdatumIn, vdatumOut: string. Defaults, 'tss' and 'navd88'
-                name of the input and output vertical datums. Mean sea level is "tss"
-                For checking the available datums:
-                from vyperdatum.pipeline import datum_definition
-                list(datum_definition.keys())
-            epsg1, epsg2: int. Defaults 6319 and 7912
-                coordinate system code of the data. Points inside Chesapeake/Delaware bay needs to be
-                converted using a different epsgs code (7912). 
-            areaFile: str
-                complete path of if a polygon geopackage file with the area of the Chesapeake/Delaware bay
-                where the epgs2 code is needed.
-        Returns
-            df: dataframe
-                dataframe with the vertical difference between datums of the requested points.     
-    '''
-    ## load area where the epsg 7912 is needed
-    aux0 =__file__
-    if sys.platform == 'win32':
-        aux1 = aux0.split('\\')
-        aux2 = '\\'.join(aux1[:-2])
-    else:
-        aux1 = aux0.split('/')
-        aux2 = '/'.join(aux1[:-2])
-    areaFile = os.path.join(aux2, 'adds', 'vyperDatum', 'chesapeake_delaware_bay_area', areaFile)
-    
-    pol = gpd.read_file(areaFile)
-    aux = pointsInsidePoly(list(zip(x, y)), list(pol.geometry[0].exterior.coords))
-    ## define vector with zeros to only get the difference between datums
-    zcero = np.zeros(len(x))
-    ## load vyperdatum
-    ### Valid tidal area
-    vp0 = pkg(vdatum_directory = vdatum_directory, silent = True)
-    ## get the difference between vertical datums on the requested points
-    vp0.transform_points((epsg1, vdatumIn), (epsg1, vdatumOut), x[~aux], y[~aux], z = zcero[~aux])
-    ## call class
-    vp1 = pkg(silent = True)
-    ## get the difference between vertical datums on the requested points
-    vp1.transform_points((epsg2, vdatumIn), (epsg1, vdatumOut), x[aux], y[aux], z = zcero[aux])   
-    ## define dataframe
-    df0 = pd.DataFrame({'x': x[~aux], 'y': y[~aux], 'dz': vp0.z, 'area': 0})
-    df1 = pd.DataFrame({'x': x[aux], 'y': y[aux], 'dz': vp1.z, 'area': 1})
-    df = pd.concat([df0, df1], axis = 0)
-    df = df.dropna()
-    df.index = range(len(df))
-    df.to_pickle(pathout)
-    
-    return df
-    
-def changeDatum(x, y, z, var, dzFile, zeroDif=-20):
-    ''' Change the vertical datum
+def changeDatum(x, y, z, var, dzFile, zeroDif=-20, distThreshold=1, k=7):
+    ''' Change the vertical datum from MSL to NAVD88 using the datums vertical difference from NOAA tide gauges.
+        Any list of points or stations with the MSL and NAVD88 can be used.
         Parameters
             x, y, z: arrays
                 coordinates of the points to change the datum
             var: array
                 values to be transformed
             dzFile: str
-                full path of the pickle file with the vertical difference between datums
-                for each mesh node
+                full path of the csv file with the vertical difference between datums
+                for doing interpolation. It must have columns called 'x', 'y', 'dz'
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
-                this value won't be changed.
+                this value won't be changed. Default = -20
+            distThreshold: float
+                distance threshold for limiting the inverse distance-weighted (IDW) interpolation
+                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+            k: int
+                number of points return in the kdtree query. Default = 7
         Returns
             dfout: dataframe
                 data transformed to the new datum
     '''
-    dfdz = pd.read_pickle(dzFile)
-    dfout = pd.DataFrame({'x': x, 'y': y, 'z': -1*z, 'var': var, 'dz': 0})
-    tree = KDTree(list(zip(dfdz['x'], dfdz['y'])))
-    query = tree.query(list(zip(dfout[dfout['z'] > zeroDif]['x'], dfout[dfout['z'] > zeroDif]['y'])))[1]
-    dfout.loc[dfout[dfout['z'] > zeroDif].index, 'dz'] = dfdz['dz'].values[query]
-    dfout['newVar'] = dfout['var'] + dfout['dz']
+    dfdz = pd.read_csv(dzFile)
+    dfdz = dfdz[['x', 'y', 'dz']]
+    dz = dfdz['dz'].values
     
-    return dfout
+    dfOut = pd.DataFrame({'x': x, 'y': y, 'z': -1*z, 'var': var, 'dz': 0})
+    dfAux = dfOut[(dfOut['var'] != -99999.0)]  
+    dfAux = dfAux[dfAux['z'] > -20]
+    
+    tree = KDTree(list(zip(dfdz['x'], dfdz['y'])))
+    distances, points = tree.query(list(zip(dfAux['x'], dfAux['y'])), k = k)
+    
+    valid_distances = distances <= distThreshold
+    inv_distances = 1 / distances
+    inv_distances[~valid_distances] = 0  # Set distances beyond threshold to 0
+    interpolated_dz = np.sum(dz[points] * inv_distances, axis = 1) / np.sum(inv_distances, axis = 1)
+    
+    dfAux['dz'] = interpolated_dz
+    dfAux = dfAux.dropna()
+    
+    dfOut.loc[dfAux.index, 'dz'] = dfAux['dz'].values
+    dfOut['newVar'] = dfOut['var'] - dfOut['dz']
+    
+    return dfOut
 
 def classifyPolygons(polys):
     ''' Classify polygons based on signed area to get inner and outer polygons.
@@ -386,7 +350,7 @@ def contours2gpd(tri, data, levels, epsg, pbar=False):
     
     return gdf
 
-def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel, dzFile=None, zeroDif=-20, timesteps=None):
+def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel, dzFile=None, zeroDif=-20, distThreshold=1, k=7, timesteps=None):
     ''' Run "contours2gpd" or "filledContours2gpd" if npro = 1 or "contours2gpd_mp" or "filledContours2gpd_mp" if npro > 1.
         Parameters
             ncObj: netCDF4._netCDF4.Dataset
@@ -409,6 +373,11 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
                 this value won't be changed.
+            distThreshold: float
+                distance threshold for limiting the inverse distance-weighted (IDW) interpolation
+                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+            k: int
+                number of points return in the kdtree query. Default = 7
             timesteps: numpy array. Default None
                 timesteps to extract if the ncObj is a time-varying ADCIRC output file. If None, all time steps are exported
         Returns
@@ -443,7 +412,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
     if timeVar == 0:
         aux = ncObj[var][:].data
         if dzFile != None: ## change datum
-            dfNewDatum = changeDatum(x, y, z, aux, dzFile, zeroDif)
+            dfNewDatum = changeDatum(x, y, z, aux, dzFile, zeroDif, distThreshold, k)
             ## change nan to -99999 and transform it to a 1D vector
             aux = np.nan_to_num(dfNewDatum['newVar'].values, nan = -99999.0).reshape(-1)*auxMult
         else: ## original datum remains constant
@@ -480,7 +449,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
                 ## data to 1D non masked array
                 aux = ncObj[var][t, :].data
                 if dzFile != None: ## change datum
-                    dfNewDatum = changeDatum(x, y, z, aux, dzFile, zeroDif)
+                    dfNewDatum = changeDatum(x, y, z, aux, dzFile, zeroDif, distThreshold, k)
                     ## change nan to -99999 and transform it to a 1D vector
                     aux = np.nan_to_num(dfNewDatum['newVar'].values, nan = -99999.0).reshape(-1)*auxMult
                 else: ## original datum remains constant
@@ -755,7 +724,7 @@ def nc2xr(ncFile, var):
     return ds
     
 def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitIn='m', epsgIn=4326,
-           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20, timesteps=None):
+           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, distThreshold=1, k=7, zeroDif=-20, timesteps=None):
     ''' Run all necesary functions to export adcirc outputs as shapefiles.
         Parameters
             ncFile: string
@@ -789,6 +758,11 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
                 this value won't be changed.
+            distThreshold: float
+                distance threshold for limiting the inverse distance-weighted (IDW) interpolation
+                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+            k: int
+                number of points return in the kdtree query. Default = 7
             timesteps: numpy array. Default None
                 timesteps to extract if the ncObj is a time-varying ADCIRC output file. If None, all time steps are exported
         Returns
@@ -826,7 +800,7 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
     
     t00 = time.time()
     gdf = runExtractContours(nc, var, levels, conType, epsgIn, stepLevel, orgMaxLevel, 
-                            dzFile, zeroDif, timesteps)
+                            dzFile, zeroDif, distThreshold, k, timesteps)
 
     logger.info(f'    Ready with the contours extraction: {(time.time() - t00)/60:0.3f} min') # Changed
  
