@@ -670,9 +670,9 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, pkg0, pkg1, levshp
  
 def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=4326, 
                                  vUnitIn='m', vUnitOut='ft', var='zeta_max', conType ='polygon', subDomain=None, epsgSubDom=None, 
-                                 exportMesh=False, dzFile=None, zeroDif=-20, nameGrassLocation=None, createGrassLocation=True, 
-                                 createLocMethod='from_raster', attrCol='zMean', repLenGrowing=1.0, compAdcirc2dem=True, 
-                                 floodDepth=False, ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
+                                 exportMesh=False, dzFile=None, zeroDif=-20, distThreshold=1, k=7, nameGrassLocation=None, 
+                                 createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', repLenGrowing=1.0, 
+                                 compAdcirc2dem=True, floodDepth=False, ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
     ''' Run static downscaling method and the nc2shp function of the kalpanaExport module.
         Parameters
         ********************************************************************************************************************
@@ -730,6 +730,11 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
                 this value won't be changed.
+            distThreshold: float
+                distance threshold for limiting the inverse distance-weighted (IDW) interpolation
+                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+            k: int
+                number of points return in the kdtree query. Default = 7
         ********************************************************************************************************************
         ***************************************** OPTIONAL inputs of static method *****************************************
         ********************************************************************************************************************

@@ -511,7 +511,7 @@ def postProcessHeadLoss(floodDepth, kalpanaShp, pkg0, pkg1, ras2vec):
 
 def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFiles, rasterFiles,
                 rawCostRas, totalCostRas, corrDownDEM, epsgIn=4326, vUnitIn='m', var='zeta_max', conType ='polygon', 
-                subDomain=None, epsgSubDom=None, dzFile=None, zeroDif=-20, exagVal=1, nameGrassLocation=None, 
+                subDomain=None, epsgSubDom=None, dzFile=None, zeroDif=-20, distThreshold=1, k=7, exagVal=1, nameGrassLocation=None, 
                 createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', floodDepth=False, 
                 ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
     '''
@@ -541,6 +541,9 @@ def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFil
     epsgSubDom (int, optional): EPSG code of the sub-domain shapefile. Default is None.
     dzFile (str, optional): Path to the digital elevation model (DEM) file for corrections. Default is None.
     zeroDif (float, optional): Value for zero difference in digital elevation. Default is -20.
+    distThreshold (float, optional): distance threshold for limiting the inverse distance-weighted (IDW) interpolation
+        if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+    k (int, optional): number of points returned in the kdtree query. Default = 7
     exagVal (float, optional): Exaggeration factor for hydraulic radius calculation. Default is 1.
     nameGrassLocation (str, optional): Name of the GRASS GIS location. Default is None.
     createGrassLocation (bool, optional): Whether to create a new GRASS GIS location. Default is True.
@@ -569,7 +572,7 @@ def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFil
 
     gdf = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut, 
                     vUnitIn, epsgIn, subDomain, epsgSubDom, dzFile = dzFile, 
-                    zeroDif = zeroDif)
+                    zeroDif = zeroDif, distThreshold = distThreshold, k = k)
     
     logger.info(f'Head loss downscaling started')
 

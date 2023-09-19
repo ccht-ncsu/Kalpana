@@ -51,6 +51,10 @@ dzFile = None
 ## threshold to do apply the vertical datum difference, below -20 vyperdatum gives weird
 ## results
 zeroDif = -20
+## only tide stations closed than this threshold are used to interpolate the vertical datum difference
+distThreshold = 1
+## number of points to query for the inverse distance-weighted interpolation
+k = 7
 ## full path of the grass location if a existing one will be used
 ## if None a new location called 'grassLoc' is created. A new location is created in
 ## example_03
@@ -81,7 +85,7 @@ finalOutToLatLon = False
 #################### calling downscaling
 runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=epsgIn, 
                                  vUnitIn=vUnitIn, vUnitOut=vUnitOut, var=var, conType =conType, subDomain=subDomain, epsgSubDom=epsgSubDom, 
-                                 exportMesh= exportMesh, dzFile=dzFile, zeroDif=-zeroDif, nameGrassLocation=nameGrassLocation, 
-                                 createGrassLocation=createGrassLocation, createLocMethod=createLocMethod, attrCol=attrCol, 
-                                 repLenGrowing=repLenGrowing, compAdcirc2dem=compAdcirc2dem, floodDepth=floodDepth, 
+                                 exportMesh= exportMesh, dzFile=dzFile, zeroDif=-zeroDif, distThreshold=distThreshold, k=k, 
+                                 nameGrassLocation=nameGrassLocation, reateGrassLocation=createGrassLocation, createLocMethod=createLocMethod, 
+                                 attrCol=attrCol, epLenGrowing=repLenGrowing, compAdcirc2dem=compAdcirc2dem, floodDepth=floodDepth, 
                                  ras2vec=ras2vec, exportOrg=exportOrg, leveesFile = leveesFile, finalOutToLatLon=finalOutToLatLon)
