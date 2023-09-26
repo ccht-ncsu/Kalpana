@@ -6,7 +6,7 @@ import rioxarray as rxr
 from pathlib import Path
 from itertools import islice
 
-def demToPNG(fileIn, pathOut, noData = 255, tileSize = 5_000):
+def demToPNG(fileIn, pathOut, noData = 255, tileSize = 5_000, ampFactor = 1):
     ''' Transform DEM to png
         Parameters
             fileIn: str
@@ -31,7 +31,7 @@ def demToPNG(fileIn, pathOut, noData = 255, tileSize = 5_000):
     noDataDem = dem.rio.nodata
     ## get only first channel, outputs of kalpana are
     ## greyscale images or tifs with only one channel
-    demAux = dem[0,:,:].data
+    demAux = dem[0,:,:].data*ampFactor
     ## replace that value with "noData" input
     demAux[demAux == noDataDem] = noData
     ## change data type from float64 to int8
