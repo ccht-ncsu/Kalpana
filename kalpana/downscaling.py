@@ -574,6 +574,7 @@ def clumpingV2(rasterOrg, rasterGrown, rasterNew, pkg0, pkg1, leveesShp = None):
         # Place the clump back into the corresponding positions in the matrix
         newRaster[coords] = np.maximum(clump, newRaster[coords])
         
+    newRaster.flush()
     newRaster.write(mapname="kalpanaRast2_finalMask", overwrite=True)
     
     pkg0.mapcalc("$output = if($mask > 0, $grown, null())", grown = 'grownKalpanaRast2', 
