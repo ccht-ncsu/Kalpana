@@ -384,7 +384,7 @@ def contours2gpd(tri, data, levels, epsg, pbar=False):
     
     return gdf
 
-def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel, dzFile=None, zeroDif=-20, distThreshold=1, k=7, timesteps=None):
+def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel, dzFile=None, zeroDif=-20, maxDif=-5, distThreshold=0.5, k=7, timesteps=None):
     ''' Run "contours2gpd" or "filledContours2gpd" if npro = 1 or "contours2gpd_mp" or "filledContours2gpd_mp" if npro > 1.
         Parameters
             ncObj: netCDF4._netCDF4.Dataset
@@ -406,10 +406,13 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
                 for each mesh node
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
-                this value won't be changed.
+                this value won't be changed. Default = -20
+            maxDif: int
+                threshold to define the percentage of the dz given by the spatial interpolation to be applied.
+                Defaul = -5. 
             distThreshold: float
                 distance threshold for limiting the inverse distance-weighted (IDW) interpolation
-                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+                if no points closer than the threshold, dz is set to 0. Default = 0.5 (check units of coordinates)
             k: int
                 number of points return in the kdtree query. Default = 7
             timesteps: numpy array. Default None
@@ -446,7 +449,7 @@ def runExtractContours(ncObj, var, levels, conType, epsg, stepLevel, orgMaxLevel
     if timeVar == 0:
         aux = ncObj[var][:].data
         if dzFile != None: ## change datum
-            dfNewDatum = changeDatum(x, y, z, aux, dzFile, zeroDif, distThreshold, k)
+            dfNewDatum = changeDatum(x, y, z, aux, dzFile, zeroDif, maxDif, distThreshold, k)
             ## change nan to -99999 and transform it to a 1D vector
             aux = np.nan_to_num(dfNewDatum['newVar'].values, nan = -99999.0).reshape(-1)*auxMult
         else: ## original datum remains constant
@@ -758,7 +761,8 @@ def nc2xr(ncFile, var):
     return ds
     
 def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitIn='m', epsgIn=4326,
-           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20, distThreshold=1, k=7, timesteps=None):
+           subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20, 
+           maxDif=-50, distThreshold=1, k=7, timesteps=None):
     ''' Run all necesary functions to export adcirc outputs as shapefiles.
         Parameters
             ncFile: string
@@ -791,10 +795,13 @@ def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitI
                 for each mesh node
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
-                this value won't be changed.
+                this value won't be changed. Default = -20
+            maxDif: int
+                threshold to define the percentage of the dz given by the spatial interpolation to be applied.
+                Defaul = -5. 
             distThreshold: float
                 distance threshold for limiting the inverse distance-weighted (IDW) interpolation
-                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+                if no points closer than the threshold, dz is set to 0. Default = 0.5 (check units of coordinates)
             k: int
                 number of points return in the kdtree query. Default = 7
             timesteps: numpy array. Default None
