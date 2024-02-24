@@ -21,6 +21,7 @@ import dask
 #from tqdm.dask import TqdmCallback # Changed
 #from vyperdatum.points import VyperPoints
 from scipy.spatial import KDTree, distance
+from scipy.interpolate import interp1d
 from itertools import islice
 from pathlib import Path
 import rioxarray as rxr
@@ -61,9 +62,17 @@ def gdfChangeVerUnit(gdf, ini, out):
     
     return gdf2
 
-def changeDatum(x, y, z, var, dzFile, zeroDif=-20, distThreshold=1, k=7):
+def changeDatum(x, y, z, var, dzFile, zeroDif=-20, maxDif=-5, distThreshold=0.5, k=7):
     ''' Change the vertical datum from MSL to NAVD88 using the datums vertical difference from NOAA tide gauges.
-        Any list of points or stations with the MSL and NAVD88 can be used.
+        Any list of points or stations with the MSL and NAVD88 can be used. The function applies inverse distance weighting
+        interpolation to change the vertical datum of the points with depth [zeroDif, abs(zeroDif)]. It finds the k nearest
+        NOAA tide gauges to each mesh vertex to do the spatial interpolation. If any of the k nearest stations are more than
+        distThreshold away, that station is neglected. The vertical datum difference is applied in segments:
+        -Case 1: z < zeroDif or z > abs(zeroDif) --> no change
+        -Case 2: z >= zeroDif and z <= maxDif --> linear interp between 0 and 1 using z as independent variable
+        -Case 3: z > maxDif and z < abs(maxDif) --> full vert datum change is applied
+        -Case 4: z >= abs(maxDif) and z <= abs(zeroDif) --> linear interp between 0 and 1 using z as independent variable
+
         Parameters
             x, y, z: arrays
                 coordinates of the points to change the datum
@@ -75,36 +84,61 @@ def changeDatum(x, y, z, var, dzFile, zeroDif=-20, distThreshold=1, k=7):
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
                 this value won't be changed. Default = -20
+            maxDif: int
+                threshold to define the percentage of the dz given by the spatial interpolation to be applied.
+                Defaul = -5. 
             distThreshold: float
                 distance threshold for limiting the inverse distance-weighted (IDW) interpolation
-                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+                if no points closer than the threshold, dz is set to 0. Default = 0.5 (check units of coordinates)
             k: int
                 number of points return in the kdtree query. Default = 7
         Returns
             dfout: dataframe
                 data transformed to the new datum
     '''
+    ## read csv with vertical datum differences
     dfdz = pd.read_csv(dzFile)
+    ## keep only important columns
     dfdz = dfdz[['x', 'y', 'dz']]
     dz = dfdz['dz'].values
     
+    ## define output dataframe with mesh vertex coordinates and values of the water level
     dfOut = pd.DataFrame({'x': x, 'y': y, 'z': -1*z, 'var': var, 'dz': 0})
+    ## remove dry vertices
     dfAux = dfOut[(dfOut['var'] != -99999.0)]  
-    dfAux = dfAux[dfAux['z'] > -20]
+    ## remove vertices below zeroDif and above abs(zeroDif)
+    dfAux = dfAux[(dfAux['z'] > zeroDif) & (dfAux['z'] < -1*zeroDif)]
+    ## set the dz amp factor to 1 for all mesh vertices between maxDif and abs(maxDif)
+    dfAux.loc[dfAux[(dfAux['z'] > maxDif) & (dfAux['z'] < -1*maxDif)].index, 'amp'] = 1
+    ## define linear interpolation function for segment (zeroDif, maxDif)
+    interpFx1 = interp1d([zeroDif, maxDif], [0, 1], kind='linear')
+    ## compute the amp factor for segment (zeroDif, maxDif)
+    dfAux.loc[dfAux[(dfAux['z'] >= zeroDif) & (dfAux['z'] <= maxDif)].index, 'amp'] = interpFx1(dfAux[(dfAux['z'] >= zeroDif) & (dfAux['z'] <= maxDif)]['z'].values)
+    ## define linear interpolation function for segment (|maxDif|, |zeroDif|)
+    interpFx2 = interp1d([np.abs(maxDif), np.abs(zeroDif)], [1, 0], kind='linear')
+    ## compute the amp factor for segment (|maxDif|, |zeroDif|)
+    dfAux.loc[dfAux[(dfAux['z'] >= np.abs(maxDif)) & (dfAux['z'] <= np.abs(zeroDif))].index, 'amp'] = interpFx2(dfAux[(dfAux['z'] >= np.abs(maxDif)) & (dfAux['z'] <= np.abs(zeroDif))]['z'].values)
     
+    ## define tree for spatial search of nearest neighbors
     tree = KDTree(list(zip(dfdz['x'], dfdz['y'])))
+    ## find the k nearest NOAA tide stations to each mesh vertex
     distances, points = tree.query(list(zip(dfAux['x'], dfAux['y'])), k = k)
     
+    ## mask points farthest away than distThreshold
     valid_distances = distances <= distThreshold
+    ## inverse of distances
     inv_distances = 1 / distances
-    inv_distances[~valid_distances] = 0  # Set distances beyond threshold to 0
+    ## set distances beyond threshold to 0
+    inv_distances[~valid_distances] = 0
+    ## inverse distance-weighted interpolation
     interpolated_dz = np.sum(dz[points] * inv_distances, axis = 1) / np.sum(inv_distances, axis = 1)
     
+    ## add dz to the dataframe with mesh data
     dfAux['dz'] = interpolated_dz
     dfAux = dfAux.dropna()
-    
     dfOut.loc[dfAux.index, 'dz'] = dfAux['dz'].values
-    dfOut['newVar'] = dfOut['var'] - dfOut['dz']
+    ## apply the vertical datum correction with the reduction factor
+    dfOut['newVar'] = dfOut['var'] - dfOut['dz']*dfOut['amp']
     
     return dfOut
 
