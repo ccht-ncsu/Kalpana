@@ -670,7 +670,7 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, pkg0, pkg1, levshp
  
 def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=4326, 
                                  vUnitIn='m', vUnitOut='ft', var='zeta_max', conType ='polygon', subDomain=None, epsgSubDom=None, 
-                                 exportMesh=False, dzFile=None, zeroDif=-20, distThreshold=1, k=7, nameGrassLocation=None, 
+                                 exportMesh=False, dzFile=None, zeroDif=-20, maxDif=-5, distThreshold=0.5, k=7, nameGrassLocation=None, 
                                  createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', repLenGrowing=1.0, 
                                  compAdcirc2dem=True, floodDepth=False, ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
     ''' Run static downscaling method and the nc2shp function of the kalpanaExport module.
@@ -729,10 +729,13 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
                 for each mesh node
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
-                this value won't be changed.
+                this value won't be changed. Default = -20
+            maxDif: int
+                threshold to define the percentage of the dz given by the spatial interpolation to be applied.
+                Defaul = -5. 
             distThreshold: float
                 distance threshold for limiting the inverse distance-weighted (IDW) interpolation
-                if no points closer than the threshold, dz is set to 0. Default = 1 (check units of coordinates)
+                if no points closer than the threshold, dz is set to 0. Default = 0.5 (check units of coordinates)
             k: int
                 number of points return in the kdtree query. Default = 7
         ********************************************************************************************************************
@@ -772,11 +775,12 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
     if exportMesh == True:
         gdf, mesh = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, 
                            vUnitOut, vUnitIn, epsgIn, subDomain, epsgSubDom, exportMesh,
-                           os.path.splitext(os.path.basename(meshFile))[0], dzFile, zeroDif)
+                           os.path.splitext(os.path.basename(meshFile))[0], dzFile, zeroDif, maxDif, distThreshold, k)
         meshFile = os.path.join(pathaux, os.path.splitext(os.path.basename(meshFile))[0] + '.shp')
     else:
         gdf = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut, 
-                     vUnitIn, epsgIn, subDomain, epsgSubDom, dzFile = dzFile, zeroDif = zeroDif)
+                     vUnitIn, epsgIn, subDomain, epsgSubDom, dzFile = dzFile, zeroDif = zeroDif, maxDif = maxDif, 
+                     distThreshold = distThreshold)
         #Not needed anymore since we are isomg clumpingV2 fx. the mesh is not used to get a clumpig threshold 
         #mesh = gpd.read_file(os.path.splitext(meshFile)[0]+'.shp', ignore_geometry = True)
     
@@ -845,8 +849,8 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
     logger.info(f'Output files saved on: {pathaux}') # Changed
 
 def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
-                                                        nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', 
-                                                        exportDEM=True):
+                                                        nameGrassLocation=None, createGrassLocation=True, 
+                                                        createLocMethod='from_raster', exportDEM=True):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
         Parameters
             fort14: str

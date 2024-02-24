@@ -762,7 +762,7 @@ def nc2xr(ncFile, var):
     
 def nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut='ft', vUnitIn='m', epsgIn=4326,
            subDomain=None, epsgSubDom=None, exportMesh=False, meshName=None, dzFile=None, zeroDif=-20, 
-           maxDif=-50, distThreshold=1, k=7, timesteps=None):
+           maxDif=-5, distThreshold=1, k=7, timesteps=None):
     ''' Run all necesary functions to export adcirc outputs as shapefiles.
         Parameters
             ncFile: string
