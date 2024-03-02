@@ -1,6 +1,6 @@
 <img src="adds/imgs/kalpana.PNG" width="1028"/>
 
-Kalpana is a Python module to convert *ADCIRC* output files to geospatial vector formats (shapefile or kmz), and to downscale the maximum water elevations onto a higher-resolution raster. 
+**Kalpana is a Python module to convert *ADCIRC* outputs to geospatial vector formats (shapefile or kmz), and to downscale the maximum water elevations onto a higher-resolution raster**
 
 ## *ADCIRC* to geospatial vector formats
 
@@ -9,7 +9,7 @@ Kalpana was developed originally by Rosemary Cyriac, and her efforts were aided 
 
 ## Downscaling
 
-Kalpana can downscale the maximum water elevations (*maxele.63.nc*) to a higher-resolution raster by considering small-scale topographic features. This process can provide a more-accurate representation of the inundation extent. 
+By considering small-scale topographic features, Kalpana can downscale the maximum water elevations (*maxele.63.nc*) to a higher-resolution raster. This process can provide a more accurate representation of the extent of the inundation. 
 As part of the downscaling, the water surface can be expanded outward to intersect with the ground surface, beyond the extent predicted by ADCIRC. This expansion can be done in two ways: the static method was developed by Nelson Tull, and then the head-loss method was developed by Carter Rucker. The details can be found in [this paper](https://link.springer.com/epdf/10.1007/s11069-021-04634-8?sharing_token=5GBxenc0qDVGHm3BGk6KhPe4RwlQNchNByi7wbcMAY69maaLpgXTBxca-OorPGWBn2w2ySSkXhIRhNeWoyNx8-ituX0UqAcNj_LDMh_kFz6sCpb5e882TbeHKiKpzRd_j4XfVH_6ONriheKYxx2CECQI07z23OD-pFrCALWfyVc=). The schematics below show the downscaling process.
 
 **Storm surge expansion**
@@ -25,3 +25,11 @@ As part of the downscaling, the water surface can be expanded outward to interse
 Kalpana was updated to python 3 and upgraded by Tomás Cuevas as a part of his MSc research. 
 Instructions for using Kalpana can be found in the examples folder, including a few Jupyter notebooks created by Brandon Tucker. 
 For any question, comment or suggestion please send an email to tomascuevas@gmail.com or open an *Issue*.
+
+## Updated version
+
+This software is published under the  [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) license.
+
+## Citation
+**Paper:**<br>
+Rucker, C.A., Tull, N., Dietrich, J.C., Langan, T.E., Mitasova, H., Blanton, B.O., Fleming, J.G. and Luettich, R.A., 2021. Downscaling of real-time coastal flooding predictions for decision support. Natural Hazards, 107, pp.1341-1369.
