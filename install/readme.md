@@ -1,5 +1,5 @@
 Setting up python for using Kalpana will depend on which of the features listed below you want to use. 
-For more detail go to https://ccht.ccee.ncsu.edu/ or to the paper (Rucker et al., 2021).
+For more detail go to the examples folder.
 
 (1) Exporting ADCIRC outputs as Shapefiles, GeoPackage or KMZ.<br>
 (2) Downscale ADCIRC maximum water elevation output to a finer resolution.
