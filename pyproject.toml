@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["kalpana"]
+
+[project]
+name = "kalpana"
+version = "0.0.23"
+dependencies = [
+	"dask",
+	"geopandas",
+	"rioxarray",
+	"pandas",
+	"matplotlib",
+	"netCDF4",
+	"simplekml",
+	"scipy",
+	"rtree",
+	"cmocean",     
+	"tqdm",
+	"numpy",
+	"ipykernel",
+	"shapely",
+	"loguru",
+]
+
+authors = [
+  { name="Tomas Cuevas", email="tomascuevas@gmail.com.com" },
+  { name="James McManus", email="jmpmcman@renci.org" },
+  { name="Casey Dietrich", email="jcdietri@ncsu.edu" },
+]
+
+description = "Downscaling ADCIRC flooding predictions"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ccht-ncsu/Kalpana"
+"Bug Tracker" = "https://github.com/ccht-ncsu/Kalpana/issues"
