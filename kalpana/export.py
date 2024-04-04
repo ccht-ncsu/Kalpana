@@ -103,7 +103,7 @@ def changeDatum(x, y, z, var, dzFile, zeroDif=-20, maxDif=-5, distThreshold=0.5,
     dz = dfdz['dz'].values
     
     ## define output dataframe with mesh vertex coordinates and values of the water level
-    dfOut = pd.DataFrame({'x': x, 'y': y, 'z': -1*z, 'var': var, 'dz': 0, 'amp': 0})
+    dfOut = pd.DataFrame({'x': x, 'y': y, 'z': -1*z.reshape(-1), 'var': var.reshape(-1), 'dz': 0, 'amp': 0})
     ## remove dry vertices
     dfAux = dfOut[(dfOut['var'] != -99999.0)]
     ## remove vertices below zeroDif and above abs(zeroDif)
