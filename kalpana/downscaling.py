@@ -670,9 +670,9 @@ def postProcessStatic(compAdcirc2dem, floodDepth, kalpanaShp, pkg0, pkg1, levshp
  
 def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, meshFile, epsgIn=4326, 
                                  vUnitIn='m', vUnitOut='ft', var='zeta_max', conType ='polygon', subDomain=None, epsgSubDom=None, 
-                                 exportMesh=False, dzFile=None, zeroDif=-20, nameGrassLocation=None, createGrassLocation=True, 
-                                 createLocMethod='from_raster', attrCol='zMean', repLenGrowing=1.0, compAdcirc2dem=True, 
-                                 floodDepth=False, ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
+                                 exportMesh=False, dzFile=None, zeroDif=-20, maxDif=-5, distThreshold=0.5, k=7, nameGrassLocation=None, 
+                                 createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', repLenGrowing=1.0, 
+                                 compAdcirc2dem=True, floodDepth=False, ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
     ''' Run static downscaling method and the nc2shp function of the kalpanaExport module.
         Parameters
         ********************************************************************************************************************
@@ -729,7 +729,15 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
                 for each mesh node
             zeroDif: int
                 threshold for using nearest neighbor interpolation to change datum. Points below
-                this value won't be changed.
+                this value won't be changed. Default = -20
+            maxDif: int
+                threshold to define the percentage of the dz given by the spatial interpolation to be applied.
+                Defaul = -5. 
+            distThreshold: float
+                distance threshold for limiting the inverse distance-weighted (IDW) interpolation
+                if no points closer than the threshold, dz is set to 0. Default = 0.5 (check units of coordinates)
+            k: int
+                number of points return in the kdtree query. Default = 7
         ********************************************************************************************************************
         ***************************************** OPTIONAL inputs of static method *****************************************
         ********************************************************************************************************************
@@ -765,13 +773,16 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
         os.mkdir(pathaux)
     
     if exportMesh == True:
+        meshFileAux = os.path.splitext(os.path.basename(meshFile))[0]
         gdf, mesh = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, 
                            vUnitOut, vUnitIn, epsgIn, subDomain, epsgSubDom, exportMesh,
-                           os.path.splitext(os.path.basename(meshFile))[0], dzFile, zeroDif)
+                           meshFileAux, dzFile, zeroDif, maxDif, distThreshold, k)
         meshFile = os.path.join(pathaux, os.path.splitext(os.path.basename(meshFile))[0] + '.shp')
+    
     else:
         gdf = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut, 
-                     vUnitIn, epsgIn, subDomain, epsgSubDom, dzFile = dzFile, zeroDif = zeroDif)
+                     vUnitIn, epsgIn, subDomain, epsgSubDom, False, None, dzFile, zeroDif, maxDif, 
+                     distThreshold, k)
         #Not needed anymore since we are isomg clumpingV2 fx. the mesh is not used to get a clumpig threshold 
         #mesh = gpd.read_file(os.path.splitext(meshFile)[0]+'.shp', ignore_geometry = True)
     
@@ -839,13 +850,13 @@ def runStatic(ncFile, levels, epsgOut, pathOut, grassVer, pathRasFiles, rasterFi
     logger.info(f'Kalpana finished sucsesfully after: {(t5 - t0)/60:0.3f} min') # Changed
     logger.info(f'Output files saved on: {pathaux}') # Changed
 
-def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
-                                                        nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', 
-                                                        exportDEM=True):
+def meshRepLen2raster(meshFile, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, rasterFiles, subDomain=None, 
+                                                        nameGrassLocation=None, createGrassLocation=True, 
+                                                        createLocMethod='from_raster', exportDEM=True):
     ''' Function to rasterize mesh shapefile created from the fort.14 file
         Parameters
-            fort14: str
-                full path of the fort.14 file
+            meshFile: str
+                full path of the fort.14 file or maxele.63.nc
             epsgIn: int
                 coordinate system of the adcirc input
             epsgOut: int
@@ -872,19 +883,23 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
     '''
     ## create gdf from fort14 file with elements as geometries
     t0 = time.time()
-    if fort14.endswith('.nc'):
-        gdfMesh = fort14togdf(fort14, epsgIn, epsgOut) ## default netcdf
+    if meshFile.endswith('.nc'):
+        gdfMesh = fort14togdf(meshFile, epsgIn, epsgOut) ## default netcdf
     else:
-        gdfMesh = fort14togdf(fort14, epsgIn, epsgOut, fileintype = 'fort.14')
-    logger.info(f'fort14 to mesh: {(time.time() - t0)/60:0.3f} min') # Changed
+        gdfMesh = fort14togdf(meshFile, epsgIn, epsgOut, fileintype = 'fort.14')
     
+    logger.info(f'Mesh created: {(time.time() - t0)/60:0.3f} min') # Changed
+
     ## clip contours if requested
     if subDomain is not None:
         t0 = time.time()
         subDom = readSubDomain(subDomain, epsgIn)
         gdfMesh = gpd.clip(gdfMesh, subDom)
         logger.info(f'Clip mesh using subfomain: {(time.time() - t0)/60:0.3f} min') # Changed
-
+    
+    if len(gdfMesh) == 0:
+        sys.exit('The mesh GeoDataFrame is empty, check subDomain and epsgOut')
+    
     ## export gdf as shapefile
     t0 = time.time()
     gdfMesh.to_file(pathOut)
@@ -913,7 +928,7 @@ def meshRepLen2raster(fort14, epsgIn, epsgOut, pathOut, grassVer, pathRasFiles, 
                 pathRasFiles, rasterFiles, createLocMethod, epsgOut)
     
     if exportDEM == True:
-        gs.run_command('r.out.gdal', input = 'dem', flags = 'cm', format = 'GTiff', nodata = -9999,
+        gs.run_command('r.out.gdal', input = 'dem', flags = 'cm', format = 'GTiff', nodata = -9999, overwrite=True,
                output = os.path.join(os.path.dirname(pathOut), 'downscaling_dem.tif'))
     
     ## get minimum area
