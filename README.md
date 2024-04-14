@@ -26,10 +26,14 @@ Kalpana was updated to python 3 and upgraded by Tomás Cuevas as a part of his M
 Instructions for using Kalpana can be found in the examples folder, including a few Jupyter notebooks created by Brandon Tucker. 
 For any question, comment or suggestion please send an email to tomascuevas@gmail.com or open an *Issue*.
 
-## Updated version
+## Citation
 
 This software is published under the  [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) license.
 
 ## Citation
 **Paper:**<br>
 Rucker, C.A., Tull, N., Dietrich, J.C., Langan, T.E., Mitasova, H., Blanton, B.O., Fleming, J.G. and Luettich, R.A., 2021. Downscaling of real-time coastal flooding predictions for decision support. Natural Hazards, 107, pp.1341-1369.
+
+## Installation
+We recommend creating a separate conda environment to install Kalpana. The details are provided in the ```install``` folder.
+
