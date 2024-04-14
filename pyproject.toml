@@ -24,6 +24,8 @@ dependencies = [
 	"ipykernel",
 	"shapely",
 	"loguru",
+	"cartopy",
+	"psycopg"
 ]
 
 authors = [
