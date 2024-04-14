@@ -9,10 +9,6 @@
 
 ## Visualization 
 
-Setup for running the visualization examples (export_exampleXX.ipynb):
-1. Create a conda environment using the yml file provided in the *install* folder. See [the miniconda website](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
-2. Clone the Kalpana repository to your local device. [Here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) you can find the instructions.
-
 **Export example 01** (export_example01.ipynb)<br>
 Create contours as polygons based on the maximum flooding outputs from *ADCIRC*, then export the polygons as a .shp file.
 
@@ -31,9 +27,7 @@ visualize the water level from a time-varying netcdf (*fort.63.nc*) file.
 
 ## Downscaling
 
-To use the downscaling method, it is required to have *GRASS GIS* installed. *Kalpana* uses *GRASS GIS* in the backend calling it from a python script. On a Linux OS, you just need to install/compile *GRASS GIS* (https://grass.osgeo.org/) and create a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) using the yml file provided in the *install* folder. On Windows it is more complicated. You need to install *GRASS GIS* and use the *Python* installation that comes with *GRASS GIS*. 
-
-To make it more user-friendly we made two *Docker* images to run the *Kalpana* downscaling tools. With these images, a user can skip the software installation and proceed directly to using *Kalpana*. One image is for running the container interactively, and the other image is non-interactive. The instructions for using them are listed below:
+To make it more user-friendly, we made two ***Docker*** images to run the *Kalpana* downscaling tools. Users can skip the software installation with these images. One image is for running the container interactively, and the other image is non-interactive. The instructions for using them are listed below:
 
 **Non interactive**<br>
 This image has all the necessary files and has been set up to downscale *ADCIRC* simulations using the *NC9* mesh on a DEM of North Carolina. It is configured to run automatically, i.e. when running the container, the downscaling scripts are executed.
@@ -42,13 +36,13 @@ This image has all the necessary files and has been set up to downscale *ADCIRC*
     ```docker pull tacuevas/kalpana_nc:latest```
 3) Create a folder, place the maxele.63.nc and runKalpanaStatic.inp files inside, and 'cd' to it. The *inp* file is provided in this folder, and the *ADCIRC* *maxele.63.nc* file can be found [here](https://go.ncsu.edu/kalpana-example-inputs).
 4) Modify the file *runKalpanaStatic.inp* if you want to change the downscaling inputs (e.g. levels, crs, vertical unit, etc).
-5) Run the container declaring a volume so kalpana can access the folder created in *step 3*. Before running the container, check you are located in the same folder where you placed the input files. We also provide a copy of the *Python* script executed when the container is ran (*runKalpanaStatic.py*)<br>
+5) Run the container declaring a volume so kalpana can access the folder created in *step 3*. Before running the container, check you are located in the same folder where you placed the input files. We also provide a copy of the Python script executed when the container is ran (*runKalpanaStatic.py*)<br>
     ```docker run -it -v "$(pwd)":/home/kalpana/inputs tacuevas/kalpana_nc:latest```
 6) This image only supports the *Static* downscaling method.
 
 
 **Interactive**<br>
-This image is configured to run kalpana interactively, all the python packages and *GRASS GIS* are installed. You need to copy the examples *downscaling_exampleXX.py* , the necessary inputs (availables [here](https://drive.google.com/drive/folders/1cbQzN4SrLs_rVlz9q8zHCKbFtQpLO5CG?usp=sharing)), and the *Kalpana* *downscaling.py* and *export.py* python modules from this repo to the container.
+This image is configured to run kalpana interactively, all the Python packages and *GRASS GIS* are installed. You need to copy the examples *downscaling_exampleXX.py* , the necessary inputs (available [here](https://drive.google.com/drive/u/2/folders/14gOAzbfuMUk3asRFsMCtOup3NL3V6EgF)), and the *Kalpana* *downscaling.py* and *export.py* Python modules from this repo to the container.
 
 The steps for running the container:
 
