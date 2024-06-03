@@ -25,7 +25,8 @@ dependencies = [
 	"shapely==2.0.0",
 	"loguru==0.7.0",
 	"cartopy==0.23.0",
-	"psycopg==3.1.18"
+	"psycopg==3.1.18",
+	"scikit-learn==1.5.0"
 ]
 
 authors = [
