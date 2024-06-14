@@ -61,7 +61,7 @@ def plot_nc(nc, var, levels, ncvec = None, dxvec = None, dyvec = None,
            vecsc = None, veccolor = 'k', xlims = None, ylims = None, 
            cbar = False, ts = None, ax = None, fig = None, 
            cmap = 'viridis', fsize = (8, 6), cb_shrink = 1, cb_label = None, 
-           background_map = False):
+           background_map = False, extend = 'neither'):
     
     ''' Funtion to create 2D plots from netcdf files
         Parameters
@@ -99,6 +99,8 @@ def plot_nc(nc, var, levels, ncvec = None, dxvec = None, dyvec = None,
                 colorbar label
             background_map: boolean
                 True for using cartopy to plot a background map, doesn't work on the HPC
+            extend: str
+                'neither', 'both', 'min', 'max'
         Returns
             ax: matplotlib ax
     '''
@@ -116,7 +118,7 @@ def plot_nc(nc, var, levels, ncvec = None, dxvec = None, dyvec = None,
         fig, ax = plt.subplots(figsize = fsize, subplot_kw={'projection': ccrs.PlateCarree()}, 
                             constrained_layout=True)
 
-    contours = ax.tricontourf(tri, aux, levels = levels, cmap = cmap)
+    contours = ax.tricontourf(tri, aux, levels = levels, cmap = cmap, extend = extend)
     
     if ncvec is not None:
         ## plot vectors
@@ -135,7 +137,7 @@ def plot_nc(nc, var, levels, ncvec = None, dxvec = None, dyvec = None,
     ax.set_xlabel('Longitude [deg]')
     ax.set_ylabel('Latitude [deg]')
     if cbar == True:
-        cb = fig.colorbar(contours, shrink = cb_shrink, extend = 'max', ax = ax)
+        cb = fig.colorbar(contours, shrink = cb_shrink, ax = ax)
         cb.set_label(cb_label)
     
     if background_map == True:
@@ -149,17 +151,18 @@ def plot_nc(nc, var, levels, ncvec = None, dxvec = None, dyvec = None,
 
     return ax
 
-def vis_pgons(gdf, levels, xlims = None, ylims = None,
+def plot_kalpana_pgons(gdf, levels, var = 'zMean', xlims = None, ylims = None,
               ax = None, fig = None, fsize = (8,6), 
               cbar = True, cmap = 'viridis', cbar_label = None, 
-              ticks = None, background_map = True, point_circle = None):
+              background_map = True):
     '''Plots polygon objects from a GeoDataframe file.
     Parameters
         gdf: GeoDataframe object
             usually created from nc2shp() in Kalpana
-        levels: list to define levels
-            [min, max, step]
-            must be length 3
+        levels: numpy array
+            contours to plot
+        var: str
+            name of the column to plot
         xlims, ylims: list
             limits of the plot
         ax: matplotlib axis
@@ -170,23 +173,21 @@ def vis_pgons(gdf, levels, xlims = None, ylims = None,
             True for adding colorbar
         cmap: string
             name of the cmap. recommended None to use custom colormap built into function
-        cb_label: string
+        cbar_label: string
             colorbar label
-        ticks: list
-            colorbar ticks
         background_map: boolean
             True for using cartopy to plot a background map, doesn't work on the HPC
-        point_circle: shapely Point
-                draws a circle around the point
     Returns
         ax: matplotlib axes subplots
     '''
 
-    if ax == None and background_map == False:
+    if ax is None and background_map == False:
         fig, ax = plt.subplots(figsize = fsize)
-    elif ax == None and background_map == True:
+    
+    elif ax is None and background_map == True:
         fig, ax = plt.subplots(figsize = fsize, subplot_kw={'projection': ccrs.PlateCarree()}, 
                             constrained_layout=True)
+        
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0.5, linestyle='--')
     gl.top_labels = False
     gl.right_labels = False
@@ -196,26 +197,21 @@ def vis_pgons(gdf, levels, xlims = None, ylims = None,
     if ylims is not None:
         ax.set_ylim(ylims)
 
-    if point_circle is not None:
-        box = gpd.GeoDataFrame(geometry = [point_circle.buffer(6)])
-        box.boundary.plot(ax = ax, color = 'k', ls = '--')
-
     if background_map == True:
         ax.add_feature(cfeature.LAND)
         ax.add_feature(cfeature.COASTLINE,lw=0.25)
         ax.add_feature(cfeature.LAKES)
 
-    mycmap=plt.cm.get_cmap(cmap, int(levels[1]/levels[2])) 
-    
-    if ticks == None:
-        ticks = np.arange(levels[0], levels[1], levels[2])
+    step = levels[1] - levels[0]
+    mycmap = plt.cm.get_cmap(cmap, int(levels[-1]/step))    
 
     #plot polygons
     if cbar == False:
-        gdf.plot(column = 'zMean', legend = False, ax = ax, aspect = 'equal')
+        gdf.plot(column = var, legend = False, ax = ax, aspect = 'equal')
+    
     else:
-        gdf.plot(column = 'zMean', legend = True, cmap = mycmap, vmin = levels[0]-0.25, vmax = levels[1]-0.25,
-            legend_kwds={'label': cbar_label, 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': ticks}, 
+        gdf.plot(column = var, legend = True, cmap = mycmap, vmin = levels[0], vmax = levels[-1],
+            legend_kwds={'label': cbar_label, 'orientation': 'vertical', 'fraction': 0.046, 'pad': 0.04, 'ticks': levels}, 
             ax = ax, aspect = 'equal')
     
     return ax
