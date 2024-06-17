@@ -777,7 +777,7 @@ def subsetMesh(f14in, subDomain, f14out, epsg=4326, sortBy=1, rev=False):
     ## if more than one are merged
     dfMainland = renumMainlandBC(meshSub, gdfOpen, dfOpen, dfNodesNew, epsg)
     time07 = time.time()
-    print(f'  Update numbering closed land boundary conditions: {(time07 - time06)/60:0.2f} min')
+    print(f'  Update numbering open land boundary conditions: {(time07 - time06)/60:0.2f} min')
     ## write new fort.14
     writeFort14(f14in, f14out, meshSub, dfNodesNew, dfOpen, dctClosed, dfMainland)
     time08 = time.time()
