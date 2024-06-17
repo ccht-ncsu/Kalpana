@@ -25,4 +25,4 @@ If you want to use the downscaling tools, You need to use the Python that comes 
 5. For using Jupyter Notebooks with the GRASS GIS Python installation paste the lines below on the GRASS GIS cmd:<br>
 ```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\```<br>
 ```set PATH=%PATH%;C:\Users\tacuevas\AppData\Roaming\Python\Python39\Scripts\```<br>
-```jupyter notebook```
+```jupyter-notebook```
