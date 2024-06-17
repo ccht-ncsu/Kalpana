@@ -1,6 +1,7 @@
 import os
 import sys
 # sys.path.append(r'/home/tacuevas/github/Kalpana/kalpana')
+## this is not necessary if the module is in the same folder
 from downscaling import runStatic
 '''
 Example for doing the static downscaling using an existing grass location, and importing
@@ -26,7 +27,7 @@ grassVer = 8.2
 pathRasFiles = r'../adds/inputs_examples'
 ## rasters filenames, can be a list if more than one. 
 ## 'all' for importing ALL THE FILES in pathRasFiles 
-rasterFiles = 'North_Carolina_CoNED_Topobathy_DEM_25m_version_20.tif'
+rasterFiles = 'NC_CoNED_subset_100m.tif'
 ## full path of the raster with the mesh element size
 meshFile = r'/home/tomas/Downloads/NC9_NCConED_25m.tif'
 ## crs of adcirc output (default value)
