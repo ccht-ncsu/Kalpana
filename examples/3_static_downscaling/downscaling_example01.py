@@ -2,6 +2,7 @@
 import os
 import sys
 # sys.path.append(r'/home/tacuevas/github/Kalpana/kalpana')
+## this is not necessary if the module is in the same folder
 from downscaling import meshRepLen2raster
 
 '''
@@ -14,9 +15,9 @@ fort14 = r'../adds/inputs_examples/fort.14' ## path of the fort.14 file
 epsgIn = 4326 ## CRS for lat/lon
 epsgOut = 6346 ## CRS of downscaling DEM
 pathOut = r'/home/tomas/Downloads/NC9_NCConED_25m.shp' ## full path of the output shapefile 
-grassVer = 8.2
+grassVer = 8.2 ## version of grass 8.2 and 8.3 works
 pathRasFiles = r'../adds/inputs_examples'
-rasterFiles = 'North_Carolina_CoNED_Topobathy_DEM_25m_version_20.tif'
+rasterFiles = 'NC_CoNED_subset_100m.tif'
 ## in this case we will use the same downscaling raster bounding box as the subdomain. 
 subDomain=os.path.join(pathRasFiles, rasterFiles)
 nameGrassLocation=None

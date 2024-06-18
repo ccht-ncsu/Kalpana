@@ -4,7 +4,7 @@ from downscalingHeadLoss import preCompCostSurface
 from loguru import logger
 
 # %%
-## grass version
+## version of grass 8.2 and 8.3 works
 grassVer = 8.2
 
 ## boolean flag for creating a GRASS GIS location
