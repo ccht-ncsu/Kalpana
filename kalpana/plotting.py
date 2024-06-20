@@ -151,11 +151,11 @@ def plot_nc(nc, var, levels, ncvec = None, dxvec = None, dyvec = None,
 
     return ax
 
-def plot_kalpana_pgons(gdf, levels, var = 'zMean', xlims = None, ylims = None,
+def plot_kalpana_gdf(gdf, levels, var = 'zMean', xlims = None, ylims = None,
               ax = None, fig = None, fsize = (8,6), 
               cbar = True, cmap = 'viridis', cbar_label = None, 
               background_map = True):
-    '''Plots polygon objects from a GeoDataframe file.
+    '''Plots polygon or polyline objects from a GeoDataframe file.
     Parameters
         gdf: GeoDataframe object
             usually created from nc2shp() in Kalpana
