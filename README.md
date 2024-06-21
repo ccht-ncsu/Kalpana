@@ -10,7 +10,8 @@ Kalpana was developed originally by Rosemary Cyriac, and her efforts were aided 
 ## Downscaling
 
 By considering small-scale topographic features, Kalpana can downscale the maximum water elevations (*maxele.63.nc*) to a higher-resolution raster. This process can provide a more accurate representation of the extent of the inundation. 
-As part of the downscaling, the water surface can be expanded outward to intersect with the ground surface, beyond the extent predicted by ADCIRC. This expansion can be done in two ways: the static method was developed by Nelson Tull, and then the head-loss method was developed by Carter Rucker. The details can be found in [this paper](https://link.springer.com/epdf/10.1007/s11069-021-04634-8?sharing_token=5GBxenc0qDVGHm3BGk6KhPe4RwlQNchNByi7wbcMAY69maaLpgXTBxca-OorPGWBn2w2ySSkXhIRhNeWoyNx8-ituX0UqAcNj_LDMh_kFz6sCpb5e882TbeHKiKpzRd_j4XfVH_6ONriheKYxx2CECQI07z23OD-pFrCALWfyVc=). The schematics below show the downscaling process.
+As part of the downscaling, the water surface can be expanded outward to intersect with the ground surface, beyond the extent predicted by ADCIRC. This expansion can be done in two ways: the static method was developed by Nelson Tull, and then the head-loss method was developed by Carter Rucker. The details can be found in [this paper](https://link.springer.com/epdf/10.1007/s11069-021-04634-8?sharing_token=5GBxenc0qDVGHm3BGk6KhPe4RwlQNchNByi7wbcMAY69maaLpgXTBxca-OorPGWBn2w2ySSkXhIRhNeWoyNx8-ituX0UqAcNj_LDMh_kFz6sCpb5e882TbeHKiKpzRd_j4XfVH_6ONriheKYxx2CECQI07z23OD-pFrCALWfyVc=). 
+The schematics below show the downscaling process.
 
 **Storm surge expansion**
 
@@ -22,11 +23,11 @@ As part of the downscaling, the water surface can be expanded outward to interse
 
 ## Updated version
 
-Kalpana was updated to python 3 and upgraded by Tomás Cuevas as a part of his MSc research. 
-Instructions for using Kalpana can be found in the examples folder, including a few Jupyter notebooks created by Brandon Tucker. 
-For any question, comment or suggestion please send an email to tomascuevas@gmail.com or open an *Issue*.
+Kalpana was updated to Python 3 and upgraded by Tomás Cuevas as a part of his MSc research. The details can be found in [his thesis](chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://ccht.ccee.ncsu.edu/wp-content/uploads/sites/10/2024/04/Cuevas-Lopez-2024-Thesis.pdf).
+Instructions for using Kalpana can be found in the examples folder, including a few Jupyter notebooks created by Brandon Tucker and Tomás. 
+For any questions, comments, or suggestions, please send an email to tomascuevas@gmail.com or open an *Issue*.
 
-## Citation
+## License
 
 This software is published under the  [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) license.
 
