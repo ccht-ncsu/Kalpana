@@ -23,7 +23,7 @@ The schematics below show the downscaling process.
 
 ## Updated version
 
-Kalpana was updated to Python 3 and upgraded by Tomás Cuevas as a part of his MSc research. The details can be found in [his thesis](chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://ccht.ccee.ncsu.edu/wp-content/uploads/sites/10/2024/04/Cuevas-Lopez-2024-Thesis.pdf).
+Kalpana was updated to Python 3 and upgraded by Tomás Cuevas as a part of his MSc research. The details can be found in [his thesis](https://repository.lib.ncsu.edu/items/cb11dd56-045f-4e91-a4d9-2b9e566423d8).
 Instructions for using Kalpana can be found in the examples folder, including a few Jupyter notebooks created by Brandon Tucker and Tomás. 
 For any questions, comments, or suggestions, please send an email to tomascuevas@gmail.com or open an *Issue*.
 
