@@ -11,7 +11,7 @@ from loguru import logger
 
 def getADCIRCFileNameVariables(modelRunID):
     ''' Returns DataFrame containing a list of variables (track_raw_fst, downloadurl, ADCIRCgrid, RunStartTime, advisory),
-        extracted from table ASGS_Mon_config_item, in the asgs_dashboard DB, using the public.get_adcirc_filename_variables
+        extracted from table APSVIZ_Mon_config_item, in the asgs_dashboard DB, using the public.get_adcirc_filename_variables
         SQL function with modelRunID as input. These variables are used to construct filenames.
         Parameters
             modelRunID: string
@@ -22,9 +22,11 @@ def getADCIRCFileNameVariables(modelRunID):
 
     try:
         # Create connection to database, set autocommit, and get cursor
-        with psycopg.connect(dbname=os.environ['ASGS_DB_DATABASE'], user=os.environ['ASGS_DB_USERNAME'],
-                             host=os.environ['ASGS_DB_HOST'], port=os.environ['ASGS_DB_PORT'],
-                             password=os.environ['ASGS_DB_PASSWORD']) as conn:
+        with psycopg.connect(dbname=os.environ['APSVIZ_DB_DATABASE'],
+                             user=os.environ['APSVIZ_DB_USERNAME'],
+                             host=os.environ['APSVIZ_DB_HOST'],
+                             port=os.environ['APSVIZ_DB_PORT'],
+                             password=os.environ['APSVIZ_DB_PASSWORD']) as conn:
             cur = conn.cursor()
 
             # Set enviromnent
