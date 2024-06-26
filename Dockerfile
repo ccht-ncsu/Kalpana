@@ -13,24 +13,24 @@
 #       docker push containers.renci.org/eds/kalpana:latest
 ##############
 # Use grass alpine image.
-FROM continuumio/miniconda3:23.5.2-0-alpine as build
+FROM continuumio/miniconda3 as build
 
 # author
 MAINTAINER Jim McManus
 
 # extra metadata
-LABEL version="v0.0.9"
+LABEL version="v0.1.0"
 LABEL description="Kalpana image with Dockerfile."
 
 # update conda
 RUN conda update conda
 
+# install conda pack to compress this stage
+RUN conda install -c conda-forge conda-pack
+
 # Create the virtual environment
 COPY build/env_kalpana_v1.yml .
 RUN conda env create -f env_kalpana_v1.yml
-
-# install conda pack to compress this stage
-RUN conda install -c conda-forge conda-pack
 
 # conpress the virtual environment
 RUN conda-pack -n env_kalpana_v1 -o /tmp/env.tar && \
@@ -43,7 +43,16 @@ RUN /venv/bin/conda-unpack
 ##############
 # stage 2: create a python implementation using the stage 1 virtual environment
 ##############
-FROM mundialis/grass-py3-pdal:8.2.1-alpine
+FROM mundialis/grass-py3-pdal:7.8.8-debian
+
+# Install libraries required to install miniconda.
+RUN apt-get update
+
+# install wget and bc
+RUN apt-get install -y wget bc
+
+# clear out the apt cache
+RUN apt-get clean
 
 # Set bash as default shell.
 ENV SHELL /bin/bash
@@ -51,8 +60,11 @@ ENV SHELL /bin/bash
 # Add user kalpana; -u xxxx (1324)  is specific to running on a RENCI VM. It
 # enables writing to the /projects directory. To use change 1324 to your user ID.
 # If not on a RENCI VM use RUN adduser -D kalpana kalpana.
-#RUN adduser -D nru -u 1324 nru
-RUN adduser -D nru -u 1000 nru
+#RUN useradd --create-home -u 1324 nru RUN
+RUN useradd --create-home -u 1000 nru
+
+# Make user kalpana.
+USER nru
 
 # Make working directory /home/nru.
 WORKDIR /home/nru
@@ -67,17 +79,13 @@ ENV PATH /venv/bin:$PATH
 # Copy Kalpana Python scripts.
 COPY kalpana kalpana
 
+# set the python path
+ENV PYTHONPATH=/home/nru
+
 # Set GDAL env variables
 ENV GDAL_DATA=/venv/share/gdal
 ENV GDAL_DRIVER_PATH=/venv/lib/gdalplugins
 ENV PROJ_LIB=/venv/share/proj
 
 # Change owner of /home/nru to nru.
-RUN chown -R nru:nru /home/nru
-
-# Make user kalpana.
-USER nru
-
-# Initialize conda using the bash shell.
-#RUN conda init bash
-
+#RUN chown -R nru:nru /home/nru
