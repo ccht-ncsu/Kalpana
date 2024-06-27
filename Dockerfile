@@ -57,22 +57,20 @@ RUN apt-get clean
 # Set bash as default shell.
 ENV SHELL /bin/bash
 
-# Add group and user nru
-RUN groupadd nru
+# Add user and group nru
 RUN useradd --create-home -u 1000 nru
-RUN usermod -a -G nru nru
  
-# Change owner and group of /home/nru to nru.
-RUN chown -R nru:nru /home/nru
-
 # Make working directory /home/nru.
 WORKDIR /home/nru
 
-# Make user kalpana.
-USER nru
-
 # Copy /venv from the previous stage:
 COPY --from=build /venv /venv
+
+# Change owner and group of /home/nru to nru.
+RUN chown -R nru:nru /home/nru
+
+# Make user kalpana. 
+USER nru
 
 # make the virtual environment active
 ENV VIRTUAL_ENV /venv
