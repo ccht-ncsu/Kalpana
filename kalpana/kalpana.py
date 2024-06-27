@@ -207,7 +207,8 @@ def main(args):
 
         # Define input variables extracting their values from YAML object
         meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/'+inputVariables['meshFilename']
-        dzFile = '/data/kalpana/dzFiles/'+grid+'/'+inputVariables['dzFilename']
+        #dzFile = '/data/kalpana/dzFiles/'+grid+'/'+inputVariables['dzFilename']
+        dzFile = '/projects/ees/kalpana/dzFiles/'+inputVariables['dzFilename']
         pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
         rasterFiles = inputVariables['rasterFiles']
         subDomain = '/data/kalpana/'+runLocation+'/DEM/'+rasterFiles
