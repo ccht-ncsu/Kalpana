@@ -43,7 +43,7 @@ RUN /venv/bin/conda-unpack
 ##############
 # stage 2: create a python implementation using the stage 1 virtual environment
 ##############
-FROM mundialis/grass-py3-pdal:7.8.8-debian
+FROM mundialis/grass-py3-pdal:latest-debian  
 
 # Install libraries required to install miniconda.
 RUN apt-get update
