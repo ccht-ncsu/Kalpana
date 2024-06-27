@@ -64,7 +64,7 @@ RUN useradd --create-home -u 1000 nru
 WORKDIR /home/nru
 
 # Copy /venv from the previous stage:
-COPY --chown=nru --from=build /venv /venv
+COPY --from=build /venv /venv
 
 # Make user kalpana. 
 USER nru
@@ -74,7 +74,7 @@ ENV VIRTUAL_ENV /venv
 ENV PATH /venv/bin:$PATH
 
 # Copy Kalpana Python scripts.
-COPY kalpana kalpana
+COPY --chown=nru kalpana kalpana
 
 # set the python path
 ENV PYTHONPATH=/home/nru
