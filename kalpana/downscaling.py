@@ -3,9 +3,11 @@ import os
 import subprocess
 import sys
 import time
+import threading
 import dask
 #from tqdm.dask import TqdmCallback # Changed
 import geopandas as gpd
+import rasterio as rio
 import rioxarray as rxr
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
@@ -971,14 +973,20 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
     ## open raster
     rasIn = rxr.open_rasterio(filein)
     bname = os.path.splitext(os.path.basename(filein))[0]
+    env = rio.Env(
+        GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+        CPL_VSIL_CURL_USE_HEAD=False,
+        CPL_VSIL_CURL_ALLOWED_EXTENSIONS="TIF",
+    )
     ## reproject if raster is in wgs84 (lat/lon)
     if res == 'same':
         logger.info('Reproject '+bname+' to EPSG 4326')
-        rasOut = rasIn.rio.reproject(epsgOut)
+        with env:
+            with rio.open(filein) as src:
+                with rio.vrt.WarpedVRT(src, crs="EPSG:4326") as vrt:
+                    rasOut = rxr.open_rasterio(vrt, chunks=True, lock=threading.Lock(),)
+
         logger.info('Reprojected '+bname+' to EPSG 4326') # Changed
-        #logger.info('Write '+bname+' to COG') # Changed 
-        #rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
-        #logger.info('Wrote '+bname+' to COG') # Changed 
         logger.info('Write '+bname+' to TIFF') # Changed 
         rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed
         logger.info('Wrote '+bname+' to TIFF') # Changed 
