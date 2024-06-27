@@ -64,10 +64,7 @@ RUN useradd --create-home -u 1000 nru
 WORKDIR /home/nru
 
 # Copy /venv from the previous stage:
-COPY --from=build /venv /venv
-
-# Change owner and group of /home/nru to nru.
-RUN chown -R nru:nru /home/nru
+COPY --chown=nru --from=build /venv /venv
 
 # Make user kalpana. 
 USER nru
