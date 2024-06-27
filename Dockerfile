@@ -88,4 +88,4 @@ ENV GDAL_DRIVER_PATH=/venv/lib/gdalplugins
 ENV PROJ_LIB=/venv/share/proj
 
 # Change owner of /home/nru to nru.
-#RUN chown -R nru:nru /home/nru
+RUN chown -R nru:nru /home/nru
