@@ -63,6 +63,9 @@ ENV SHELL /bin/bash
 #RUN useradd --create-home -u 1324 nru RUN
 RUN useradd --create-home -u 1000 nru
 
+# Change owner of /home/nru to nru.
+RUN chown -R nru:nru /home/nru
+
 # Make user kalpana.
 USER nru
 
@@ -86,6 +89,3 @@ ENV PYTHONPATH=/home/nru
 ENV GDAL_DATA=/venv/share/gdal
 ENV GDAL_DRIVER_PATH=/venv/lib/gdalplugins
 ENV PROJ_LIB=/venv/share/proj
-
-# Change owner of /home/nru to nru.
-RUN chown -R nru:nru /home/nru
