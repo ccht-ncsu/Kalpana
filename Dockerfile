@@ -57,20 +57,19 @@ RUN apt-get clean
 # Set bash as default shell.
 ENV SHELL /bin/bash
 
-# Add user kalpana; -u xxxx (1324)  is specific to running on a RENCI VM. It
-# enables writing to the /projects directory. To use change 1324 to your user ID.
-# If not on a RENCI VM use RUN adduser -D kalpana kalpana.
-#RUN useradd --create-home -u 1324 nru RUN
+# Add group and user nru
+RUN groupadd nru
 RUN useradd --create-home -u 1000 nru
-
-# Change owner of /home/nru to nru.
+RUN usermod -a -G nru nru
+ 
+# Change owner and group of /home/nru to nru.
 RUN chown -R nru:nru /home/nru
-
-# Make user kalpana.
-USER nru
 
 # Make working directory /home/nru.
 WORKDIR /home/nru
+
+# Make user kalpana.
+USER nru
 
 # Copy /venv from the previous stage:
 COPY --from=build /venv /venv
