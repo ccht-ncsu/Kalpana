@@ -5,9 +5,8 @@ import numpy as np
 import subprocess
 from loguru import logger
 
-sys.path.append(r'/home/tacuevas/github/Kalpana/kalpana')
-from downscaling import importRasters_parallel, grassEnvVar, setGrassEnv, clumpingV2
-from export import nc2shp
+from kalpana.downscaling import importRasters_parallel, grassEnvVar, setGrassEnv, clumpingV2
+from kalpana.export import nc2shp
 
 def setManning(manningRasPath, manningLandCover, pkg, URConstant=1, k=1):
     '''
@@ -270,6 +269,13 @@ def preCompCostSurface(grassVer, createGrassLocation, pathGrassLocation, pathRas
     t2 = time.time()
     logger.info(f'    Setup grass environment: {(t2 - t1)/60:0.2f} min')
     
+    dem_as_array = garray.array('dem')
+    if np.min(dem_as_array) < 0:
+        gs.run_command('g.rename', raster = ('dem', 'dem_aux'), overwrite = True, quiet = True)
+        gs.mapcalc("$output=if(dem_aux < 0, null(),dem_aux)",
+                        output="dem",
+                        overwrite=True,
+                        quiet=True) 
     ## set Manning's raster
     setManning(manningRasPath, manningLandCover, gs, URConstant, k)
     t3 = time.time()
@@ -511,9 +517,9 @@ def postProcessHeadLoss(floodDepth, kalpanaShp, pkg0, pkg1, ras2vec):
 
 def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFiles, rasterFiles,
                 rawCostRas, totalCostRas, corrDownDEM, epsgIn=4326, vUnitIn='m', var='zeta_max', conType ='polygon', 
-                subDomain=None, epsgSubDom=None, dzFile=None, zeroDif=-20, exagVal=1, nameGrassLocation=None, 
-                createGrassLocation=True, createLocMethod='from_raster', attrCol='zMean', floodDepth=False, 
-                ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
+                subDomain=None, epsgSubDom=None, dzFile=None, zeroDif=-20, maxDif=-5, distThreshold=0.5, k=7, 
+                exagVal=1, nameGrassLocation=None, createGrassLocation=True, createLocMethod='from_raster', 
+                attrCol='zMean', floodDepth=False, ras2vec=False, exportOrg=False, leveesFile = None, finalOutToLatLon=True):
     '''
     Executes head loss downscaling process on ADCIRC results and generates downscaled maps.
 
@@ -568,8 +574,8 @@ def runHeadLoss(ncFile, levels, epsgOut, vUnitOut, pathOut, grassVer, pathRasFil
         os.mkdir(pathaux)
 
     gdf = nc2shp(ncFile, var, levels, conType, pathOut, epsgOut, vUnitOut, 
-                    vUnitIn, epsgIn, subDomain, epsgSubDom, dzFile = dzFile, 
-                    zeroDif = zeroDif)
+                     vUnitIn, epsgIn, subDomain, epsgSubDom, False, None, dzFile, zeroDif, maxDif, 
+                     distThreshold, k)
     
     logger.info(f'Head loss downscaling started')
 
