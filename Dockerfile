@@ -13,7 +13,7 @@
 #       docker push containers.renci.org/eds/kalpana:latest
 ##############
 # Use grass alpine image.
-FROM continuumio/miniconda3 as build
+FROM continuumio/miniconda3:master-alpine as build
 
 # author
 MAINTAINER Jim McManus
@@ -43,22 +43,31 @@ RUN /venv/bin/conda-unpack
 ##############
 # stage 2: create a python implementation using the stage 1 virtual environment
 ##############
-FROM mundialis/grass-py3-pdal:latest-debian  
-
-# Install libraries required to install miniconda.
-RUN apt-get update
-
-# install wget and bc
-RUN apt-get install -y wget bc
-
-# clear out the apt cache
-RUN apt-get clean
+FROM mundialis/grass-py3-pdal:latest-alpine
+ 
+# Update apk and install bash and curl.
+RUN apk --update add bash curl wget ca-certificates libstdc++
+ARG APK_GLIBC_VERSION=2.29-r0
+ARG APK_GLIBC_FILE="glibc-${APK_GLIBC_VERSION}.apk"
+ARG APK_GLIBC_BIN_FILE="glibc-bin-${APK_GLIBC_VERSION}.apk"
+ARG APK_GLIBC_I18N_FILE="glibc-i18n-${APK_GLIBC_VERSION}.apk"
+ARG APK_GLIBC_BASE_URL="https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${APK_GLIBC_VERSION}"
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub \
+    && wget "${APK_GLIBC_BASE_URL}/${APK_GLIBC_FILE}"       \
+    && apk --force-overwrite --no-cache add "${APK_GLIBC_FILE}"               \
+    && wget "${APK_GLIBC_BASE_URL}/${APK_GLIBC_BIN_FILE}"   \
+    && apk --no-cache add "${APK_GLIBC_BIN_FILE}"           \
+    && wget "${APK_GLIBC_BASE_URL}/${APK_GLIBC_I18N_FILE}"   \
+    && apk --no-cache add "${APK_GLIBC_I18N_FILE}"           \
+    && /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8 \
+    && /usr/glibc-compat/sbin/ldconfig /lib /usr/glibc/usr/lib \
+    && rm glibc-* /var/cache/apk/*
 
 # Set bash as default shell.
 ENV SHELL /bin/bash
 
 # Add user and group nru
-RUN useradd --create-home -u 1000 nru
+RUN adduser -D nru -u 1000 nru
  
 # Make working directory /home/nru.
 WORKDIR /home/nru
