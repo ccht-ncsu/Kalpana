@@ -1028,7 +1028,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
             logger.info('Write '+bname+' to TIFF') # Changed                                                                                                                                                                           
             rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif')) # Changed                                                                                                                                       
             logger.info('Wrote '+bname+' to TIFF') # Changed 
-            program_list = [['rio', 'cogeo', 'create', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif', '--web-optimized')]] # Changed 
+            program_list = [['rio', 'cogeo', 'create', os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif'), '--web-optimized']] # Changed 
             # Run list of program commands using subprocess                                                                                                                                                                            
             for program in program_list:                                                                                                                                                                                               
                 logger.info('Write '+bname+' to COG') # Changed  
