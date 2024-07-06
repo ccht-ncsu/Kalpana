@@ -10,7 +10,7 @@ On ***Linux***:<br><br>
    ```conda create --name kalpana python=3.10```<br>
 2. Install ***Kalpana*** dependencies using pip. Navigate to the Kalpana GitHub repository.<br>
   ```pip install -e .```<br>
-3. (Not necessary) To run the downscaling tools, you must install GRASS GIS (ttps://grass.osgeo.org/). Versions >= 8.2 are supported.<br><br>
+3. To use the downscaling tools, you need to install GRASS GIS (ttps://grass.osgeo.org/). Versions >= 8.2 are supported.<br><br>
 
 On ***Windows***:<br><br>
 If you just want to use the visualization functions or export the NetCDF as GIS files, use steps 1 and 2 of the Linux installation.<br>
@@ -26,3 +26,34 @@ If you want to use the downscaling tools, You need to use the Python that comes 
 ```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\```<br>
 ```set PATH=%PATH%;C:\Users\tacuevas\AppData\Roaming\Python\Python39\Scripts\```<br>
 ```jupyter notebook```
+
+
+THIS IS NOT UP-TO-DATE<be><br>
+To make it more user-friendly, we made two ***Docker*** images to run the *Kalpana* downscaling tools. Users can skip the software installation with these images. One image is for running the container interactively, and the other image is non-interactive. The instructions for using them are listed below:
+
+**Non interactive**<br>
+This image has all the necessary files and has been set up to downscale *ADCIRC* simulations using the *NC9* mesh on a DEM of North Carolina. It is configured to run automatically, i.e. when running the container, the downscaling scripts are executed.
+1) Install Docker, follow instructions [here](https://docs.docker.com/engine/install/).
+2) Using the terminal, pull the Docker image from Docker hub with the command below. This image can be used only for running the downscaling for a simulation done with the NC9 mesh in North Carolina. <br>
+    ```docker pull tacuevas/kalpana_nc:latest```
+3) Create a folder, place the maxele.63.nc and runKalpanaStatic.inp files inside, and 'cd' to it. The *inp* file is provided in this folder, and the *ADCIRC* *maxele.63.nc* file can be found [here](https://go.ncsu.edu/kalpana-example-inputs).
+4) Modify the file *runKalpanaStatic.inp* if you want to change the downscaling inputs (e.g. levels, crs, vertical unit, etc).
+5) Run the container declaring a volume so kalpana can access the folder created in *step 3*. Before running the container, check you are located in the same folder where you placed the input files. We also provide a copy of the Python script executed when the container is ran (*runKalpanaStatic.py*)<br>
+    ```docker run -it -v "$(pwd)":/home/kalpana/inputs tacuevas/kalpana_nc:latest```
+6) This image only supports the *Static* downscaling method.
+
+
+**Interactive**<br>
+This image is configured to run kalpana interactively, all the Python packages and *GRASS GIS* are installed. You need to copy the examples *downscaling_exampleXX.py* , the necessary inputs (available [here](https://drive.google.com/drive/u/2/folders/14gOAzbfuMUk3asRFsMCtOup3NL3V6EgF)), and the *Kalpana* *downscaling.py* and *export.py* Python modules from this repo to the container.
+
+The steps for running the container:
+
+1) Install Docker, follow instructions [here](https://docs.docker.com/engine/install/).
+2) To pull the image from Docker hub, use the following command on the terminal: <br>
+    ```docker pull tacuevas/kalpana_m:latest```
+3) Launch the container, use the following command on the terminal: <br>
+    ```docker run -it tacuevas/kalpana_m:latest```
+4) *cp* all the files from your local device to the container. Follow instructions [here](https://docs.docker.com/engine/reference/commandline/cp/).
+5) Run the python scripts from the Docker container with: <br>
+    ```python3 downscaling_exampleXX.py```
+6) This image support both downscaling methods.
