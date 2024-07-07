@@ -26,7 +26,7 @@ If you want to use the downscaling tools, You need to use the Python that comes 
 ```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\```<br>
 ```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\Python39\Scripts\```<br>
 ```jupyter notebook```<br>
-Replace X.X by the version of GRASS you have installed.
+(Replace X.X by the version of GRASS you have installed)
 
 
 THIS IS NOT UP-TO-DATE<be><br>
