@@ -209,46 +209,48 @@ def main(args):
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
 
-        # Read the runVariable.yml YAML file for the current run location and grid    
-        with open('/data/kalpana/'+runLocation+'/'+grid+'/runVariables.yml', 'r') as file:
-            inputVariables = yaml.safe_load(file)
-
-        # Define input variables extracting their values from YAML object
-        meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/'+inputVariables['meshFilename']
-        #dzFile = '/data/kalpana/dzFiles/'+grid+'/'+inputVariables['dzFilename']
-        dzFile = '/data/kalpana/dzFiles/'+inputVariables['dzFilename']
-        pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
-        rasterFiles = inputVariables['rasterFiles']
-        subDomain = '/data/kalpana/'+runLocation+'/DEM/'+rasterFiles
-        epsgIn = inputVariables['epsgIn']
-        epsgOut = inputVariables['epsgOut']
-        grassVer = inputVariables['grassVer']
-        conLevelsLog = "-".join(map(str, conLevels))
-        vUnitIn = inputVariables['vUnitIn']
-        vUnitOut = inputVariables['vUnitOut']
-        adcircVar = inputVariables['adcircVar']
-        conType = inputVariables['conType']
-        epsgSubDom = inputVariables['epsgSubDom']
-        exportMesh = inputVariables['exportMesh']
-        zeroDif = inputVariables['zeroDif']
-        nameGrassLocation = inputVariables['nameGrassLocation']
-        createGrassLocation = inputVariables['createGrassLocation']
-        createLocMethod = inputVariables['createLocMethod']
-        attrCol = inputVariables['attrCol']
-        repLenGrowing = inputVariables['repLenGrowing']
-        compAdcirc2dem = inputVariables['compAdcirc2dem']
-        floodDepth = inputVariables['floodDepth']
-        ras2vec = inputVariables['ras2vec']
-        exportOrg = inputVariables['exportOrg']
-        finalOutToLatLon = inputVariables['finalOutToLatLon']
-
-        # Convert leveesFile None string to None. The YAML file has None as a boolean, but python yaml sees it as a string?
-        if inputVariables['leveesFile'] == 'None':
-            leveesFile = None
-        else:
-            leveesFile = inputVariables['leveesFile']
-
         if grid == 'NCSC_SAB_v1.23' or grid == 'hsofs':
+            logger.info('ncFile '+ncFile+' does use the '+grid+' grid, so begin processing')
+
+            # Read the runVariable.yml YAML file for the current run location and grid    
+            with open('/data/kalpana/'+runLocation+'/'+grid+'/runVariables.yml', 'r') as file:
+                inputVariables = yaml.safe_load(file)
+
+            # Define input variables extracting their values from YAML object
+            meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/'+inputVariables['meshFilename']
+            #dzFile = '/data/kalpana/dzFiles/'+grid+'/'+inputVariables['dzFilename']
+            dzFile = '/data/kalpana/dzFiles/'+inputVariables['dzFilename']
+            pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
+            rasterFiles = inputVariables['rasterFiles']
+            subDomain = '/data/kalpana/'+runLocation+'/DEM/'+rasterFiles
+            epsgIn = inputVariables['epsgIn']
+            epsgOut = inputVariables['epsgOut']
+            grassVer = inputVariables['grassVer']
+            conLevelsLog = "-".join(map(str, conLevels))
+            vUnitIn = inputVariables['vUnitIn']
+            vUnitOut = inputVariables['vUnitOut']
+            adcircVar = inputVariables['adcircVar']
+            conType = inputVariables['conType']
+            epsgSubDom = inputVariables['epsgSubDom']
+            exportMesh = inputVariables['exportMesh']
+            zeroDif = inputVariables['zeroDif']
+            nameGrassLocation = inputVariables['nameGrassLocation']
+            createGrassLocation = inputVariables['createGrassLocation']
+            createLocMethod = inputVariables['createLocMethod']
+            attrCol = inputVariables['attrCol']
+            repLenGrowing = inputVariables['repLenGrowing']
+            compAdcirc2dem = inputVariables['compAdcirc2dem']
+            floodDepth = inputVariables['floodDepth']
+            ras2vec = inputVariables['ras2vec']
+            exportOrg = inputVariables['exportOrg']
+            finalOutToLatLon = inputVariables['finalOutToLatLon']
+
+            # Convert leveesFile None string to None. The YAML file has None as a boolean, but python yaml sees it as a string?
+            if inputVariables['leveesFile'] == 'None':
+                leveesFile = None
+            else:
+                leveesFile = inputVariables['leveesFile']
+
             logger.info('ncFile '+ncFile+' does use the '+grid+' grid, so begin processing')
 
             # Create outputs directory for second process shape, and tiff files
