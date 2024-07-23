@@ -11,7 +11,7 @@ On ***Linux***:<br><br>
 2. Activate the conda environment.<br>
    ```conda activate kalpana```<br>
 3. Within the conda environment, navigate to the Kalpana GitHub repository.<br>
-   ```cd Kalpana-master```<br>
+   ```cd Kalpana```<br>
 4. Install ***Kalpana*** dependencies using pip.<br>
    ```pip install -e .```<br>
 5. Then you can use ***Kalpana*** within that conda environment to visualize ADCIRC results (e.g. examples in '2_adcirc_to_vector'). However, to use the downscaling tools, you also need to install GRASS GIS (https://grass.osgeo.org/). GRASS versions >= 8.2 are supported.<br><br>
