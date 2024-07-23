@@ -8,9 +8,13 @@ On ***Linux***:<br><br>
 
 1. Create a conda environment. See [the miniconda website](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html). Kalpana has been tested with Python 3.11. You can use mamba instead if you prefer.<br>
    ```conda create --name kalpana python=3.10```<br>
-2. Install ***Kalpana*** dependencies using pip. Navigate to the Kalpana GitHub repository.<br>
-  ```pip install -e .```<br>
-3. To use the downscaling tools, you need to install GRASS GIS (ttps://grass.osgeo.org/). Versions >= 8.2 are supported.<br><br>
+2. Activate the conda environment.<br>
+   ```conda activate kalpana```<br>
+3. Within the conda environment, navigate to the Kalpana GitHub repository.<br>
+   ```cd Kalpana```<br>
+4. Install ***Kalpana*** dependencies using pip.<br>
+   ```pip install -e .```<br>
+5. Then you can use ***Kalpana*** within that conda environment to visualize ADCIRC results (e.g. examples in '2_adcirc_to_vector'). However, to use the downscaling tools, you also need to install GRASS GIS (https://grass.osgeo.org/). GRASS versions >= 8.2 are supported.<br><br>
 
 On ***Windows***:<br><br>
 If you just want to use the visualization functions or export the NetCDF as GIS files, use steps 1 and 2 of the Linux installation.<br>
