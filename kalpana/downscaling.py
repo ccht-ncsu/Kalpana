@@ -988,7 +988,7 @@ def reprojectRas(filein, pathout, epsgOut=None, res='same'):
 
         logger.info('Reprojected '+bname+' to EPSG 4326') # Changed
         logger.info('Write '+bname+' to COG') # Changed
-        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}_cog.tif'), driver="COG") # Changed
+        rasOut.rio.to_raster(os.path.join(pathout, bname + f'_epsg{epsgOut}.tif'), driver="COG") # Changed
         logger.info('Wrote '+bname+' to COG') # Changed
  
     ## change resolution
