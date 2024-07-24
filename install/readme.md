@@ -1,39 +1,49 @@
 ## Kalpana installation
 
-The first step is to clone the Kalpana repository to your local machine. You can find the instructions [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository). <br>
+The first step is to clone the *Kalpana* repository to your local machine. You can find the instructions [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository). <br>
 
-The following steps depend on your OS and what features of Kalpana you want to use.<br>
+Installation depends on how you want to use *Kalpana*. For visualization of ADCIRC outputs as vector products (e.g. GIS shapefiles), then you need to create a Conda environment and install *Kalpana* dependencies. For downscaling of ADCIRC outputs to higher resolutions, then you also need to install GRASS GIS (https://grass.osgeo.org/) and make it available to *Kalpana*.<br>
 
-On ***Linux***:<br><br>
+The following steps depend on your OS and what features of *Kalpana* you want to use.<br>
 
-1. Create a conda environment. See [the miniconda website](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html). Kalpana has been tested with Python 3.11. You can use mamba instead if you prefer.<br>
-   ```conda create --name kalpana python=3.10```<br>
-2. Activate the conda environment.<br>
-   ```conda activate kalpana```<br>
-3. Within the conda environment, navigate to the Kalpana GitHub repository.<br>
-   ```cd Kalpana```<br>
-4. Install ***Kalpana*** dependencies using pip.<br>
-   ```pip install -e .```<br>
-5. Then you can use ***Kalpana*** within that conda environment to visualize ADCIRC results (e.g. examples in '2_adcirc_to_vector'). However, to use the downscaling tools, you also need to install GRASS GIS (https://grass.osgeo.org/). GRASS versions >= 8.2 are supported.<br><br>
+On ***Linux***:<br>
+1. Create a conda environment:<br>
+a. See [the miniconda website](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html). *Kalpana* has been tested with Python 3.11. You can use mamba instead if you prefer.<br>
+      ```conda create --name kalpana python=3.11```<br>
+b. Activate the conda environment.<br>
+      ```conda activate kalpana```<br>
+c. Within the conda environment, navigate to the *Kalpana* GitHub repository.<br>
+      ```cd Kalpana```<br>
+d. Install *Kalpana* dependencies using pip.<br>
+      ```pip install -e .```<br>
+f. Then you can use *Kalpana* within that conda environment to visualize ADCIRC results (e.g. examples in '2_adcirc_to_vector').
+2. To use the downscaling tools, you also need to install GRASS GIS (https://grass.osgeo.org/). GRASS versions >= 8.2 are supported. Nothing special is needed to link GRASS to *Kalpana*, but the GRASS executable needs to be available/findable in your path.<br>
 
-On ***Windows***:<br><br>
-If you just want to use the visualization functions or export the NetCDF as GIS files, use steps 1 and 2 of the Linux installation.<br>
+On ***Windows***:<br>
+1. If you just want to use the visualization functions or export the NetCDF as GIS files, then use step 1 and 2 of the Linux installation.<br>
+2. If you want to use the downscaling tools, then you need to use the Python that comes with GRASS GIS, and you cannot have more Python versions on your system. Follow the steps below to install *Kalpana*:<br>
+a. Install GRASS GIS (https://grass.osgeo.org/). Versions >= 8.2 are supported.<br>
+b. Launch GRASS GIS, close the GUI and continue using the GRASS GIS cmd.<br>
+c. Navigate to the GitHub repo using the GRASS GIS cmd.<br>
+      ```python -m pip install -e .```<br>
+d. To use Jupyter Notebooks, you have to install it with pip <br>
+      ```python -m pip install notebook```<br>
+e. For using Jupyter Notebooks with the GRASS GIS Python installation paste the lines below (but replace X.X by the version of GRASS you have installed) on the GRASS GIS cmd:<br>
+      ```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\```<br>
+      ```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\Python39\Scripts\```<br>
+      ```jupyter notebook``` or ```python -m notebook```<br>
 
-If you want to use the downscaling tools, You need to use the Python that comes with GRASS GIS, and you can not have more Python versions on your system. Follow the steps below to install Kalpana:<br>
-1. Install GRASS GIS (ttps://grass.osgeo.org/). Versions >= 8.2 are supported.<br>
-2. Launch GRASS GIS, close the GUI and continue using the GRASS GIS cmd.
-3. Navigate to the GitHub repo using the GRASS GIS cmd.<br>
-```python -m pip install -e .```
-4. To use Jupyter Notebooks, you have to install it with pip <br>
-   ```python -m pip install notebook```
-5. For using Jupyter Notebooks with the GRASS GIS Python installation paste the lines below on the GRASS GIS cmd:<br>
-```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\```<br>
-```set PATH=%PATH%;C:\Program Files\GRASS GIS X.X\Python39\Scripts\```<br>
-```jupyter notebook``` or ```python -m notebook```<br>
-(Replace X.X by the version of GRASS you have installed)
+On ***Mac***:<br>
+1. Follow the same Step 1 as the Linux installation, but with an additional sub-step:<br>
+g. To make the conda environment to be available in Jupyter notebooks (e.g. from Anaconda), you need add the ipykernel to your conda environment:<br>
+      ```conda install ipykernel```<br>
+      ```ipython kernel install --user --name=kalpana```<br>
+2. Follow the same Step 2 as the Linux installation.
 
+<br><br><hr><br><br>
 
-THIS IS NOT UP-TO-DATE<be><br>
+**The remainder of these installation instructions are out-of-date.** We created a Docker image for an earlier version of *Kalpana*, but we have not updated the image for the latest version of *Kalpana*.<br><br>
+
 To make it more user-friendly, we made two ***Docker*** images to run the *Kalpana* downscaling tools. Users can skip the software installation with these images. One image is for running the container interactively, and the other image is non-interactive. The instructions for using them are listed below:
 
 **Non interactive**<br>
