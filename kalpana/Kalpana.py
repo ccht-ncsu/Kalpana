@@ -209,7 +209,7 @@ def main(args):
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
 
-        if grid == 'NCSC_SAB_v1.23' or grid == 'hsofs':
+        if grid == 'NCSC_SAB_v1.23' or grid == 'NCSCv2.0' or grid == 'hsofs':
             logger.info('ncFile '+ncFile+' does use the '+grid+' grid, so begin processing')
 
             # Read the runVariable.yml YAML file for the current run location and grid    
