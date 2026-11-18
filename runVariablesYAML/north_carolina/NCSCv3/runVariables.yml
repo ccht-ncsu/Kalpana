@@ -1,0 +1,27 @@
+meshFilename: NC_CoNED_NCSCv3_15m.tif
+# NCSCv3 water levels and the terrain DEM are expected to be NAVD88 in meters.
+dzFilename: null
+verticalDatumIn: NAVD88
+verticalDatumOut: NAVD88
+rasterFiles: NC_CoNED_res10m_003_15m.tif
+epsgIn: 4326
+epsgOut: 6346
+grassVer: '8.3.2'
+vUnitIn: m
+vUnitOut: m
+adcircVar: zeta_max
+conType: polygon
+epsgSubDom: 6346
+exportMesh: False
+zeroDif: -20.0
+nameGrassLocation: grassLoc
+createGrassLocation: True
+createLocMethod: from_raster
+attrCol: zMean
+repLenGrowing: 1.0
+compAdcirc2dem: True
+floodDepth: False
+ras2vec: False
+exportOrg: False
+leveesFile: None
+finalOutToLatLon: True

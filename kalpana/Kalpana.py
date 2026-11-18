@@ -209,7 +209,9 @@ def main(args):
         df = getADCIRCFileNameVariables(modelRunID)
         grid = df['ADCIRCgrid'].values[0]
 
-        if grid == 'NCSC_SAB_v1.23' or grid == 'NCSCv2.0' or grid == 'hsofs':
+        supported_grids = {'NCSC_SAB_v1.23', 'NCSCv2.0', 'NCSCv3', 'hsofs'}
+
+        if grid in supported_grids:
             logger.info('ncFile '+ncFile+' does use the '+grid+' grid, so begin processing')
 
             # Read the runVariable.yml YAML file for the current run location and grid    
@@ -218,8 +220,11 @@ def main(args):
 
             # Define input variables extracting their values from YAML object
             meshFile = '/data/kalpana/'+runLocation+'/'+grid+'/'+inputVariables['meshFilename']
-            #dzFile = '/data/kalpana/dzFiles/'+grid+'/'+inputVariables['dzFilename']
-            dzFile = '/data/kalpana/dzFiles/'+inputVariables['dzFilename']
+            dz_filename = inputVariables['dzFilename']
+            if dz_filename is None:
+                dzFile = None
+            else:
+                dzFile = os.path.join('/data/kalpana/dzFiles', dz_filename)
             pathRasFiles = '/data/kalpana/'+runLocation+'/DEM/'
             rasterFiles = inputVariables['rasterFiles']
             subDomain = '/data/kalpana/'+runLocation+'/DEM/'+rasterFiles
@@ -273,7 +278,7 @@ def main(args):
             # log start of runStatic run
             logger.info('Start runScript with the following inputs: '+runScript+', '+str(epsgIn)+', '+str(epsgOut)+', '+pathOut+', '+
                          grassVer+', '+ncFile+', '+meshFile+', '+conLevelsLog+', '+vUnitIn+', '+vUnitOut+', '+adcircVar+', '+conType+', '+
-                         str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+dzFile+', '+str(zeroDif)+', '+nameGrassLocation+', '+
+                         str(subDomain)+', '+str(epsgSubDom)+', '+str(exportMesh)+', '+str(dzFile)+', '+str(zeroDif)+', '+nameGrassLocation+', '+
                          str(createGrassLocation)+', '+createLocMethod+', '+attrCol+', '+str(repLenGrowing)+', '+str(compAdcirc2dem)+', '+
                          str(floodDepth)+', '+str(ras2vec)+', '+str(exportOrg)+', '+str(leveesFile)+', '+str(finalOutToLatLon))
 
@@ -298,7 +303,7 @@ def main(args):
                 logger.error(err)
                 sys.exit(1)
         else:
-            logger.info('ncFile '+ncFile+' does not use the NCSC_SAB_v1.22 grid or the hsofs grid, it uses the '+grid+' grid, so do not process')
+            logger.info('ncFile '+ncFile+' uses unsupported grid '+grid+', so do not process')
 
     elif args.runScript == 'runStatic':
         # variables not specific the runStatic
