@@ -43,7 +43,7 @@ RUN /venv/bin/conda-unpack
 ##############
 # stage 2: create a python implementation using the stage 1 virtual environment
 ##############
-FROM mundialis/grass-py3-pdal:latest-alpine
+FROM osgeo/grass-gis:8.3.2-alpine
  
 # Update apk and install bash and curl.
 RUN apk --update add bash curl wget ca-certificates libstdc++
